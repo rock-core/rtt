@@ -120,6 +120,7 @@ namespace RTT { namespace extras {
         RTT::os::Mutex m_command_mutex;
         bool m_break_loop;
         bool m_trigger;
+        bool m_user_timeout;
         bool m_update_sets;
 
         /** Internal method that makes sure loop() takes into account
@@ -278,7 +279,7 @@ namespace RTT { namespace extras {
         virtual void loop();
         virtual bool breakLoop();
         virtual bool stop();
-    
+
         /** Called by loop() when data is available on the file descriptor. By
          * default, it calls step() on the associated runner interface (if any)
          */
