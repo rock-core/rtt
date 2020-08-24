@@ -40,7 +40,8 @@
 
 namespace RTT {
     namespace mqueue {
-        Dispatcher* Dispatcher::DispatchI = 0;
+        Dispatcher::shared_ptr Dispatcher::DispatchI = 0;
+        os::Mutex Dispatcher::DispatchILock;
 
         void intrusive_ptr_add_ref(const RTT::mqueue::Dispatcher* p ) {
             p->refcount.inc();
