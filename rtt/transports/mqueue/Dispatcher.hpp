@@ -61,10 +61,15 @@ namespace RTT {
          */
         class Dispatcher : public Activity
         {
+            typedef boost::intrusive_ptr<Dispatcher> shared_ptr;
+        public:
+
             friend void intrusive_ptr_add_ref(const RTT::mqueue::Dispatcher* p );
             friend void intrusive_ptr_release(const RTT::mqueue::Dispatcher* p );
             mutable os::AtomicInt refcount;
-            static Dispatcher* DispatchI;
+
+            static os::Mutex DispatchILock;
+            static shared_ptr DispatchI;
 
             typedef std::map<mqd_t,base::ChannelElementBase*> MQMap;
             MQMap mqmap;
@@ -129,10 +134,9 @@ namespace RTT {
             }
 
         public:
-            typedef boost::intrusive_ptr<Dispatcher> shared_ptr;
-
             static Dispatcher::shared_ptr Instance() {
-                if ( DispatchI == 0) {
+                os::MutexLock lock(DispatchILock);
+                if (!DispatchI) {
                     DispatchI = new Dispatcher("MQueueDispatch");
                     DispatchI->start();
                 }
