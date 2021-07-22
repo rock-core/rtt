@@ -48,6 +48,11 @@ public:
         BOOST_CHECK( this->getTaskState() == TaskContext::PreOperational );
         BOOST_CHECK( this->getTargetState() == TaskContext::PreOperational );
 
+        expectedStateInStopHook = Running;
+        expectedTargetStateInStopHook = Stopped;
+        expectedStateInCleanupHook = Stopped;
+        expectedTargetStateInCleanupHook = PreOperational;
+
         this->resetFlags();
         validconfig = true;
         validstart = true;
@@ -97,24 +102,24 @@ public:
 
     void stopHook() {
         if (do_checks) {
-            BOOST_CHECK( mTaskState >= Running || mTaskState == Exception);
-            BOOST_CHECK( getTargetState() == Stopped || getTargetState() == Exception );
+            BOOST_CHECK_EQUAL(mTaskState, expectedStateInStopHook);
+            BOOST_CHECK_EQUAL(getTargetState(), expectedTargetStateInStopHook);
         }
         didstop = true;
     }
 
     void cleanupHook() {
         if (do_checks) {
-            BOOST_CHECK( mTaskState == Stopped || mTaskState == Exception);
-            BOOST_CHECK( getTargetState() == PreOperational || getTargetState() == Exception );
+            BOOST_CHECK_EQUAL(mTaskState, expectedStateInCleanupHook);
+            BOOST_CHECK_EQUAL(getTargetState(), expectedTargetStateInCleanupHook);
         }
         didcleanup = true;
     }
 
     void exceptionHook() {
         if (do_checks) {
-            BOOST_CHECK( mTaskState == Exception);
-            BOOST_CHECK( getTargetState() == Exception );
+            BOOST_CHECK_EQUAL(mTaskState, Running);
+            BOOST_CHECK_EQUAL(getTargetState(), Exception );
         }
         didexcept = true;
         if (do_throw_in_exceptionHook)
@@ -167,6 +172,8 @@ public:
     bool didcleanup;
     bool didupdate,diderror,didexcept, didbreakUH;
     bool do_fatal, do_error, do_throw_in_updateHook,do_throw_in_errorHook,do_throw_in_exceptionHook, do_trigger, do_breakUH, do_block, do_checks, do_stop;
+    TaskState expectedStateInStopHook, expectedTargetStateInStopHook;
+    TaskState expectedStateInCleanupHook, expectedTargetStateInCleanupHook;
     int  updatecount;
 };
 
@@ -517,6 +524,7 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     stc->validstart = false;
 
     // Failed configure() in PreOperational state:
+    BOOST_TEST_MESSAGE("Failed configure in PreOperational");
     BOOST_CHECK( stc->isConfigured() == false );
     BOOST_CHECK( stc->isRunning() == false );
     BOOST_CHECK( stc->configure() == false );
@@ -527,6 +535,7 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     stc->resetFlags();
 
     // Retry:
+    BOOST_TEST_MESSAGE("Retry configure");
     stc->validconfig = true;
     BOOST_CHECK( stc->configure() == true );
     BOOST_CHECK( stc->didconfig == true );
@@ -536,6 +545,7 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     stc->resetFlags();
 
     // Failed start() in Stopped state:
+    BOOST_TEST_MESSAGE("Failed start in Stopped");
     BOOST_CHECK( stc->start() == false );
     BOOST_CHECK( stc->didstart == true );
     BOOST_CHECK( stc->isRunning() == false );
@@ -544,6 +554,7 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     stc->resetFlags();
 
     // Retry:
+    BOOST_TEST_MESSAGE("Retry start");
     stc->validstart = true;
     BOOST_CHECK( stc->start() == true );
     BOOST_CHECK( stc->didstart == true );
@@ -553,6 +564,7 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     stc->resetFlags();
 
     // Error state by calling error().
+    BOOST_TEST_MESSAGE("Error state");
     stc->do_error = true;
     // Running state / updateHook :
     SimulationThread::Instance()->run(1);
@@ -562,13 +574,19 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     BOOST_CHECK( stc->isActive() == true );  // still active
     stc->resetFlags();
     stc->do_error = false;
+    BOOST_TEST_MESSAGE("Recover from Error");
     stc->recover();
     SimulationThread::Instance()->run(1);
     BOOST_CHECK( stc->isRunning() == true );
     BOOST_CHECK( stc->diderror == false );
     BOOST_CHECK( stc->didupdate == true );
 
-    // Error state by throwing in updateHook()
+    // Exception state by throwing in updateHook()
+    BOOST_TEST_MESSAGE("Exception state");
+    stc->expectedStateInStopHook = TaskCore::Running;
+    stc->expectedTargetStateInStopHook = TaskCore::Exception;
+    stc->expectedStateInCleanupHook = TaskCore::Running;
+    stc->expectedTargetStateInCleanupHook = TaskCore::Exception;
     stc->do_throw_in_updateHook = true;
     // Running state / updateHook :
     SimulationThread::Instance()->run(1);
@@ -578,6 +596,7 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     BOOST_CHECK( stc->isActive() == true );  // still active
     stc->resetFlags();
     stc->do_throw_in_updateHook = false;
+    BOOST_TEST_MESSAGE("Recover from Exception");
     stc->recover();
     SimulationThread::Instance()->run(1);
     BOOST_CHECK( stc->isConfigured() == false );
@@ -588,9 +607,14 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     stc->start();
 
     // Fatal Error state by throwing in exceptionHook()
+    BOOST_TEST_MESSAGE("Fatal error by throwing in updateHook and exceptionHook");
     stc->do_error = false;
     stc->do_throw_in_updateHook = true;
     stc->do_throw_in_exceptionHook = true;
+    stc->expectedStateInStopHook = TaskCore::Running;
+    stc->expectedTargetStateInStopHook = TaskCore::Exception;
+    stc->expectedStateInCleanupHook = TaskCore::Running;
+    stc->expectedTargetStateInCleanupHook = TaskCore::Exception;
     // Running state / updateHook :
     SimulationThread::Instance()->run(1);
     BOOST_CHECK( stc->inRunTimeError() == false );
@@ -739,6 +763,45 @@ BOOST_AUTO_TEST_CASE(testTaskCore_bails_out_if_startHook_returns_true_but_except
     task.configure();
     task.start();
     BOOST_REQUIRE(task.inException());
+}
+
+struct calling_recover_and_configure_right_after_Exception_is_valid :
+    public RTT::TaskContext
+{
+    calling_recover_and_configure_right_after_Exception_is_valid()
+        : RTT::TaskContext("test", RTT::TaskContext::PreOperational)
+        , exceptionHookCalled(false)
+        , exceptionHookCalledWhileInConfigure(false) {}
+
+    bool configureHook()
+    {
+        exceptionHookCalledWhileInConfigure = exceptionHookCalled;
+        return true;
+    }
+    void updateHook()
+    {
+        usleep(100000);
+        exception();
+    }
+    void exceptionHook()
+    {
+        usleep(100000);
+
+        exceptionHookCalled = true;
+    }
+
+    bool exceptionHookCalled, exceptionHookCalledWhileInConfigure;
+};
+BOOST_AUTO_TEST_CASE(test_calling_recover_and_configure_right_after_Exception_is_valid) {
+    calling_recover_and_configure_right_after_Exception_is_valid task;
+    task.configure();
+    task.start();
+    BOOST_REQUIRE(!task.inException());
+    task.trigger();
+    while(!task.inException()) { usleep(1000); }
+    task.recover();
+    task.configure();
+    BOOST_REQUIRE(task.exceptionHookCalledWhileInConfigure);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
