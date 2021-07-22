@@ -53,9 +53,9 @@ public:
         validstart = true;
         do_error = false;
         do_fatal = false;
-        do_throw=false;
-        do_throw2=false;
-        do_throw3=false;
+        do_throw_in_updateHook=false;
+        do_throw_in_errorHook=false;
+        do_throw_in_exceptionHook=false;
         do_trigger=false;
         do_breakUH=false;
         do_block=false;
@@ -117,7 +117,7 @@ public:
             BOOST_CHECK( getTargetState() == Exception );
         }
         didexcept = true;
-        if (do_throw3)
+        if (do_throw_in_exceptionHook)
             throw A();
     }
 
@@ -132,7 +132,7 @@ public:
             this->fatal();
         if (do_error)
             this->error();
-        if (do_throw)
+        if (do_throw_in_updateHook)
             throw A();
         if (do_trigger) {
             this->trigger();
@@ -157,7 +157,7 @@ public:
         diderror = true;
         if (do_fatal)
             this->fatal();
-        if (do_throw2)
+        if (do_throw_in_errorHook)
             throw A();
     }
 
@@ -166,7 +166,7 @@ public:
     bool didstop;
     bool didcleanup;
     bool didupdate,diderror,didexcept, didbreakUH;
-    bool do_fatal, do_error, do_throw,do_throw2,do_throw3, do_trigger, do_breakUH, do_block, do_checks, do_stop;
+    bool do_fatal, do_error, do_throw_in_updateHook,do_throw_in_errorHook,do_throw_in_exceptionHook, do_trigger, do_breakUH, do_block, do_checks, do_stop;
     int  updatecount;
 };
 
@@ -569,7 +569,7 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     BOOST_CHECK( stc->didupdate == true );
 
     // Error state by throwing in updateHook()
-    stc->do_throw = true;
+    stc->do_throw_in_updateHook = true;
     // Running state / updateHook :
     SimulationThread::Instance()->run(1);
     BOOST_CHECK( stc->inRunTimeError() == false );
@@ -577,7 +577,7 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
     BOOST_CHECK( stc->didexcept == true );
     BOOST_CHECK( stc->isActive() == true );  // still active
     stc->resetFlags();
-    stc->do_throw = false;
+    stc->do_throw_in_updateHook = false;
     stc->recover();
     SimulationThread::Instance()->run(1);
     BOOST_CHECK( stc->isConfigured() == false );
@@ -589,8 +589,8 @@ BOOST_AUTO_TEST_CASE( testFailingTCStates)
 
     // Fatal Error state by throwing in exceptionHook()
     stc->do_error = false;
-    stc->do_throw = true;
-    stc->do_throw3 = true;
+    stc->do_throw_in_updateHook = true;
+    stc->do_throw_in_exceptionHook = true;
     // Running state / updateHook :
     SimulationThread::Instance()->run(1);
     BOOST_CHECK( stc->inRunTimeError() == false );
