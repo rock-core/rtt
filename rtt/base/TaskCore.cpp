@@ -157,7 +157,7 @@ namespace RTT {
     void TaskCore::exception() {
         //log(Error) <<"Exception happend in TaskCore."<<endlog();
         TaskState copy = mTaskState;
-        mTargetState = mTaskState = Exception;
+        mTargetState = Exception;
         TRY (
             if ( copy >= Running ) {
                 stopHook();
@@ -166,6 +166,7 @@ namespace RTT {
                 cleanupHook();
             }
             exceptionHook();
+            mTaskState = Exception;
         ) CATCH(std::exception const& e,
             log(RTT::Error) << "stopHook(), cleanupHook() and/or exceptionHook() raised " << e.what() << ", going into Fatal" << endlog();
             fatal();
