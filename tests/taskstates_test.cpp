@@ -804,5 +804,67 @@ BOOST_AUTO_TEST_CASE(test_calling_recover_and_configure_right_after_Exception_is
     BOOST_REQUIRE(task.exceptionHookCalledWhileInConfigure);
 }
 
+struct calling_stop_concurrently_with_updateHook_calling_exception_works_as_expected :
+    public RTT::TaskContext
+{
+    calling_stop_concurrently_with_updateHook_calling_exception_works_as_expected()
+        : RTT::TaskContext("test", RTT::TaskContext::PreOperational)
+        , stopHookCalled(0) {}
+
+    void updateHook()
+    {
+        usleep(100000);
+        exception();
+    }
+    void stopHook()
+    {
+        ++stopHookCalled;
+    }
+
+    int stopHookCalled;
+};
+BOOST_AUTO_TEST_CASE(test_calling_stop_concurrently_with_updateHook_calling_exception_works_as_expected) {
+    calling_stop_concurrently_with_updateHook_calling_exception_works_as_expected task;
+    task.configure();
+    task.start();
+    BOOST_REQUIRE(!task.inException());
+    task.trigger();
+    task.stop();
+    BOOST_REQUIRE_EQUAL(1, task.stopHookCalled);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+
+struct calling_stop_concurrently_with_updateHook_calling_stop_works_as_expected :
+    public RTT::TaskContext
+{
+    calling_stop_concurrently_with_updateHook_calling_stop_works_as_expected()
+        : RTT::TaskContext("test", RTT::TaskContext::PreOperational)
+        , stopHookCalled(0) {}
+
+    void updateHook()
+    {
+        usleep(100000);
+        stop();
+    }
+    void stopHook()
+    {
+        ++stopHookCalled;
+    }
+
+    int stopHookCalled;
+};
+BOOST_AUTO_TEST_CASE(test_calling_stop_concurrently_with_updateHook_calling_stop_works_as_expected) {
+    calling_stop_concurrently_with_updateHook_calling_stop_works_as_expected task;
+    task.configure();
+    task.start();
+    BOOST_REQUIRE(!task.inException());
+    task.trigger();
+    task.stop();
+    BOOST_REQUIRE_EQUAL(1, task.stopHookCalled);
+    BOOST_REQUIRE_EQUAL(TaskCore::Stopped, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Stopped, task.getTargetState());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
