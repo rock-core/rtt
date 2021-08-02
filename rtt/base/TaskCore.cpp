@@ -221,17 +221,25 @@ namespace RTT {
     }
 
     bool TaskCore::stop() {
-        TaskState orig = mTaskState;
+        TaskState origTarget = mTaskState;
         if ( mTaskState >= Running ) {
             TRY(
                 mTargetState = Stopped;
                 if ( engine()->stopTask(this) ) {
-                    stopHook();
-                    mTaskState = Stopped;
-                    return true;
-                } else {
-                    mTaskState = orig;
-                    mTargetState = orig;
+                    // If updateHook was running, it might have changed the
+                    // state itself (e.g. stopped or exception). Make sure that
+                    // stopping is still relevant
+                    if ( mTaskState >= Running ) {
+                        mTargetState = Stopped;
+                        stopHook();
+                        mTaskState = Stopped;
+                        return true;
+                    }
+                    else {
+                        return false;
+                    }
+                } else if (mTargetState == Stopped) {
+                    mTargetState = origTarget;
                 }
             ) CATCH(std::exception const& e,
                 log(Error) << "in stop(): switching to exception state because of unhandled exception" << endlog();
