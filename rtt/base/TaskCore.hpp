@@ -336,6 +336,18 @@ namespace RTT
         unsigned int getTimeOutCounter() const { return mTimeOutCounter; }
 
     protected:
+        /** Change the current state
+         *
+         * Virtual to allow subclasses to listen to state changes
+         */
+        virtual void setTaskState(TaskState state);
+
+        /** Change the current state
+         *
+         * Virtual to allow subclasses to listen to state changes
+         */
+        virtual void setTargetState(TaskState state);
+
         /**
          * Implement this method such that it contains the code which
          * will be executed when \a configure() is called. The default
