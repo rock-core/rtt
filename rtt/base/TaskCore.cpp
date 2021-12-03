@@ -90,10 +90,18 @@ namespace RTT {
         return this->engine()->getActivity() && this->engine()->getActivity()->timeout();
     }
 
+    void TaskCore::setTaskState(TaskState state) {
+        mTaskState = state;
+    }
+
+    void TaskCore::setTargetState(TaskState state) {
+        mTargetState = state;
+    }
+
     bool TaskCore::configure() {
         if ( mTaskState == Stopped || mTaskState == PreOperational) {
             TRY(
-                mTargetState = Stopped;
+                setTargetState(Stopped);
                 bool successful = configureHook();
                 if (successful) {
                     if (mTaskState != Stopped && (mTaskState == mTargetState)) {
@@ -103,11 +111,12 @@ namespace RTT {
                         return false;
                     }
                     else {
-                        mTaskState = Stopped;
+                        setTaskState(Stopped);
                         return true;
                     }
                 } else {
-                    mTargetState = mTaskState = PreOperational;
+                    setTaskState(PreOperational);
+                    setTargetState(PreOperational);
                     return false;
                 }
              ) CATCH(std::exception const& e,
@@ -125,10 +134,10 @@ namespace RTT {
     bool TaskCore::cleanup() {
         if ( mTaskState == Stopped ) {
             TRY(
-                mTargetState = PreOperational;
+                setTargetState(PreOperational);
                 cleanupHook();
                 if (mTaskState == Stopped)
-                    mTaskState = PreOperational;
+                    setTaskState(PreOperational);
                 return true;
              ) CATCH(std::exception const& e,
                 log(Error) << "in cleanup(): switching to exception state because of unhandled exception" << endlog();
@@ -143,7 +152,8 @@ namespace RTT {
     }
 
     void TaskCore::fatal() {
-        mTargetState = mTaskState = FatalError;
+        setTaskState(FatalError);
+        setTargetState(FatalError);
         this->engine()->getActivity() && engine()->getActivity()->stop();
     }
 
@@ -151,13 +161,14 @@ namespace RTT {
         // detects error() from within start():
         if (mTargetState < Running)
             return;
-        mTargetState = mTaskState = RunTimeError;
+        setTaskState(RunTimeError);
+        setTargetState(RunTimeError);
     }
 
     void TaskCore::exception() {
         //log(Error) <<"Exception happend in TaskCore."<<endlog();
         TaskState copy = mTaskState;
-        mTargetState = Exception;
+        setTargetState(Exception);
         TRY (
             if ( copy >= Running ) {
                 stopHook();
@@ -166,7 +177,7 @@ namespace RTT {
                 cleanupHook();
             }
             exceptionHook();
-            mTaskState = Exception;
+            setTaskState(Exception);
         ) CATCH(std::exception const& e,
             log(RTT::Error) << "stopHook(), cleanupHook() and/or exceptionHook() raised " << e.what() << ", going into Fatal" << endlog();
             fatal();
@@ -178,11 +189,13 @@ namespace RTT {
 
     bool TaskCore::recover() {
         if ( mTaskState == Exception ) {
-            mTargetState = mTaskState = mInitialState;
+            setTaskState(mInitialState);
+            setTargetState(mInitialState);
             return true;
         }
         if (mTaskState == RunTimeError && mTargetState >= Running) {
-            mTargetState = mTaskState = Running;
+            setTaskState(Running);
+            setTargetState(Running);
             return true;
         }
         return false;
@@ -191,7 +204,7 @@ namespace RTT {
     bool TaskCore::start() {
         if ( mTaskState == Stopped ) {
             TRY (
-                mTargetState = Running;
+                setTargetState(Running);
                 bool successful = startHook();
                 if (successful) {
                     if (mTaskState != Running && (mTargetState == mTaskState)) {
@@ -201,13 +214,13 @@ namespace RTT {
                         return false;
                     }
                     else {
-                        mTaskState = Running;
+                        setTaskState(Running);
                         if ( mTriggerOnStart )
                             trigger(); // triggers updateHook() in case of non periodic!
                         return true;
                     }
                 }
-                mTargetState = Stopped;
+                setTargetState(Stopped);
             ) CATCH(std::exception const& e,
                 log(Error) << "in start(): switching to exception state because of unhandled exception" << endlog();
                 log(Error) << "  " << e.what() << endlog();
@@ -224,22 +237,22 @@ namespace RTT {
         TaskState origTarget = mTaskState;
         if ( mTaskState >= Running ) {
             TRY(
-                mTargetState = Stopped;
+                setTargetState(Stopped);
                 if ( engine()->stopTask(this) ) {
                     // If updateHook was running, it might have changed the
                     // state itself (e.g. stopped or exception). Make sure that
                     // stopping is still relevant
                     if ( mTaskState >= Running ) {
-                        mTargetState = Stopped;
+                        setTargetState(Stopped);
                         stopHook();
-                        mTaskState = Stopped;
+                        setTaskState(Stopped);
                         return true;
                     }
                     else {
                         return false;
                     }
                 } else if (mTargetState == Stopped) {
-                    mTargetState = origTarget;
+                    setTargetState(origTarget);
                 }
             ) CATCH(std::exception const& e,
                 log(Error) << "in stop(): switching to exception state because of unhandled exception" << endlog();

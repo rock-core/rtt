@@ -49,6 +49,8 @@
      (RTT_VERSION_MINOR > minor) || (RTT_VERSION_MINOR == minor && \
      (RTT_VERSION_PATCH >= patch))))
 
+#define RTT_HAS_STATE_CHANGE_HOOK
+
 #cmakedefine ORO_DISABLE_PORT_DATA_SCRIPTING
 
 // if not defined, show an error
