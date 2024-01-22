@@ -60,6 +60,7 @@
 
 #include "../../os/threads.hpp"
 #include "../../Activity.hpp"
+#include "rtt-config.h"
 
 namespace RTT
 {namespace corba
