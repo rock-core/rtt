@@ -156,8 +156,11 @@ namespace RTT {
             void dispatchChannel( base::ChannelElementBase::shared_ptr chan ) {
                 bool has_element = false;
                 RClist.apply(boost::bind(&CorbaDispatcher::hasElement, _1, chan, boost::ref(has_element)));
-                if (!has_element)
-                    RClist.append( chan );
+                if (!has_element) {
+                    while (!RClist.append( chan )) {
+                        RClist.grow(20);
+                    }
+                }
                 this->trigger();
             }
 
