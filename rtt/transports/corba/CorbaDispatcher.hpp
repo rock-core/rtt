@@ -97,9 +97,10 @@ namespace RTT {
             static CorbaDispatcher* Instance(DataFlowInterface* iface, int scheduler = defaultScheduler, int priority = defaultPriority) {
                 if (!mlock)
                     mlock = new os::Mutex();
+
+                os::MutexLock lock(*mlock);
                 DispatchMap::iterator result = DispatchI.find(iface);
                 if ( result == DispatchI.end() ) {
-                    os::MutexLock lock(*mlock);
                     // re-try to find (avoid race):
                     result = DispatchI.find(iface);
                     if ( result != DispatchI.end() )
@@ -123,29 +124,34 @@ namespace RTT {
              * @param iface
              */
             static void Release(DataFlowInterface* iface) {
+                if (!mlock) {
+                    return;
+                }
+
+                os::MutexLock lock(*mlock);
                 DispatchMap::iterator result = DispatchI.find(iface);
                 if ( result != DispatchI.end() ) {
-                    os::MutexLock lock(*mlock);
                     delete result->second;
                     DispatchI.erase(result);
                 }
-                if ( DispatchI.empty() )
-                    delete mlock;
-                mlock = 0;
             }
 
             /**
              * May be called during program termination to clean up all resources.
              */
             static void ReleaseAll() {
+                if (!mlock) {
+                    return;
+                }
+
+                os::MutexLock lock(*mlock);
+
                 DispatchMap::iterator result = DispatchI.begin();
                 while ( result != DispatchI.end() ) {
                     delete result->second;
                     DispatchI.erase(result);
                     result = DispatchI.begin();
                 }
-                delete mlock;
-                mlock = 0;
             }
 
             static void hasElement(base::ChannelElementBase::shared_ptr c0, base::ChannelElementBase::shared_ptr c1, bool& result)
