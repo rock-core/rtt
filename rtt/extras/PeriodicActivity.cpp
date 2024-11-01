@@ -165,6 +165,10 @@ namespace RTT {
         return false;
     }
 
+    bool PeriodicActivity::setAperiodicTriggerTimeout(NANO_TIME timeout) {
+        return false;
+    }
+
     unsigned PeriodicActivity::getCpuAffinity() const
     {
       return thread_->getCpuAffinity();

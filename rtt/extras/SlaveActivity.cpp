@@ -77,6 +77,10 @@ namespace RTT {
         return true;
     }
 
+    bool SlaveActivity::setAperiodicTriggerTimeout(NANO_TIME timeout) {
+        return (timeout == 0);
+    }
+
     unsigned SlaveActivity::getCpuAffinity() const
     {
         if (mmaster)

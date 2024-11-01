@@ -82,9 +82,9 @@ extern "C"
     static const NANO_TIME InfiniteNSecs = LLONG_MAX;
     static const double    InfiniteSeconds = DBL_MAX;
 
-#define ORO_WAIT_ABS 0 /** rtos_task_wait_period may wait less than the duration required to pad the period to 
+#define ORO_WAIT_ABS 0 /** rtos_task_wait_period may wait less than the duration required to pad the period to
                             catch-up with overrun timesteps (wait according to an absolute timeline) */
-#define ORO_WAIT_REL 1 /** rtos_task_wait_period will always pad the current timestep to the desired period, 
+#define ORO_WAIT_REL 1 /** rtos_task_wait_period will always pad the current timestep to the desired period,
                             regardless of previous overruns (wait according to a relative timeline) */
 
   typedef struct {

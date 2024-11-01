@@ -262,6 +262,11 @@ namespace RTT { namespace extras {
          */
         void setTimeout(int timeout);
 
+        /** Same as setTimeout, from the common Activity interface
+         *
+         */
+        bool setAperiodicTriggerTimeout(NANO_TIME timeout) override;
+
         /** Sets the timeout, in microseconds, for waiting on the IO. Set to 0
          * for blocking behaviour (no timeout).
 		 * @pre 0 <= timeout (otherwise an error is logged and \a timeout_us

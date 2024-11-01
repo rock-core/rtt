@@ -65,6 +65,10 @@ namespace RTT {
         return false;
     }
 
+    bool SequentialActivity::setAperiodicTriggerTimeout(NANO_TIME timeout) {
+        return (timeout == 0);
+    }
+
     unsigned SequentialActivity::getCpuAffinity() const
     {
       return ~0;

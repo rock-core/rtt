@@ -139,7 +139,7 @@ namespace RTT
 
             /**
              * Sets the lock timeout for a thread which does not have a period
-             * The default is 1 second 
+             * The default is 1 second
              * @param timeout_in_s the timeout is seconds
              */
             static void setLockTimeoutNoPeriod(double timeout_in_s);
@@ -148,7 +148,7 @@ namespace RTT
              * Set the lock timeout for a thread which has a period
              * by a factor of the period
              * The default is factor 10
-             * @param factor Factor of the period 
+             * @param factor Factor of the period
              */
             static void setLockTimeoutPeriodFactor(double factor);
 
@@ -241,6 +241,16 @@ namespace RTT
             virtual int getMaxOverrun() const;
 
             virtual void setWaitPeriodPolicy(int p);
+
+            /** Sets a maximum wait time between triggers in aperiodic mode
+             *
+             * This is *not* as precise as a periodic task. It is meant as a way
+             * to ensure that the tasks will be called regularly to check for e.g.
+             * input timeouts internally while in explicit trigger mode (e.g. port driven)
+             *
+             * The boolean return type is here to match the ActivityInterface definition
+             */
+            virtual bool setAperiodicTriggerTimeout(NANO_TIME timeout);
 
         protected:
             /**
@@ -350,6 +360,11 @@ namespace RTT
              * The period as it is passed to the operating system.
              */
             NANO_TIME period;
+
+            /**
+             * When in aperiodic mode, wait for a trigger for at most this long
+             */
+            NANO_TIME aperiodicTriggerTimeout;
 
             /**
              * The timeout, in seconds, for stop()

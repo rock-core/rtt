@@ -188,6 +188,8 @@ namespace RTT
 
         virtual bool setPeriod(Seconds s);
 
+        virtual bool setAperiodicTriggerTimeout(NANO_TIME timeout);
+
         virtual unsigned getCpuAffinity() const;
 
         virtual bool setCpuAffinity(unsigned cpu);

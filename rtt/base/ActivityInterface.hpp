@@ -161,6 +161,17 @@ namespace RTT
          */
         virtual bool setPeriod(Seconds s)  = 0;
 
+        /**
+         * Set a trigger timeout for aperiodic activities.
+         *
+         * When set, an aperiodic activity will be triggered after this long.
+         * Note that this is not the same as a periodic task: the period is not
+         * fixed (the timeout starts at the last time the thread started waiting)
+         * and on at least Linux, it is not using a monotonic clock.
+         *
+         * @return true if it could be updated, false otherwise.
+         */
+        virtual bool setAperiodicTriggerTimeout(NANO_TIME timeout)  = 0;
 
         /**
          * Get the cpu affinity of this activity
