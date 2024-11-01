@@ -185,6 +185,19 @@ extern "C"
         return sem_wait(m);
     }
 
+    static inline int rtos_sem_wait_timed(rt_sem_t* m, NANO_TIME delay )
+    {
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        long long delay_s = delay / 1000000000;
+
+        ts.tv_nsec += delay - delay_s * 1000000000;;
+        long sec = ts.tv_nsec / 1000000000;
+        ts.tv_sec += delay_s + sec;
+        ts.tv_nsec -= sec * 1000000000;
+        return sem_timedwait(m, &ts);
+    }
+
     static inline int rtos_sem_trywait(rt_sem_t* m )
     {
         return sem_trywait(m);
