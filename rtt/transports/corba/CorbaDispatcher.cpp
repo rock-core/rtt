@@ -41,7 +41,7 @@
 namespace RTT {
     using namespace corba;
     CorbaDispatcher::DispatchMap CorbaDispatcher::DispatchI;
-    os::Mutex* CorbaDispatcher::mlock = 0;
+    os::Mutex CorbaDispatcher::mlock;
 
     int CorbaDispatcher::defaultScheduler = ORO_SCHED_RT;
     int CorbaDispatcher::defaultPriority  = os::LowestPriority;

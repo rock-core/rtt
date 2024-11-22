@@ -64,7 +64,8 @@ namespace RTT {
 
             bool do_exit;
 
-            RTT_CORBA_API static os::Mutex* mlock;
+            /* Protects DispatchI */
+            RTT_CORBA_API static os::Mutex mlock;
 
             RTT_CORBA_API static int defaultScheduler;
             RTT_CORBA_API static int defaultPriority;
@@ -95,17 +96,9 @@ namespace RTT {
              * @return
              */
             static CorbaDispatcher* Instance(DataFlowInterface* iface, int scheduler = defaultScheduler, int priority = defaultPriority) {
-                if (!mlock)
-                    mlock = new os::Mutex();
-
-                os::MutexLock lock(*mlock);
+                os::MutexLock lock(mlock);
                 DispatchMap::iterator result = DispatchI.find(iface);
                 if ( result == DispatchI.end() ) {
-                    // re-try to find (avoid race):
-                    result = DispatchI.find(iface);
-                    if ( result != DispatchI.end() )
-                        return result->second;
-                    // *really* not found, let's create it.
                     std::string name;
                     if ( iface == 0 || iface->getOwner() == 0)
                         name = "Global";
@@ -124,11 +117,7 @@ namespace RTT {
              * @param iface
              */
             static void Release(DataFlowInterface* iface) {
-                if (!mlock) {
-                    return;
-                }
-
-                os::MutexLock lock(*mlock);
+                os::MutexLock lock(mlock);
                 DispatchMap::iterator result = DispatchI.find(iface);
                 if ( result != DispatchI.end() ) {
                     delete result->second;
@@ -140,11 +129,7 @@ namespace RTT {
              * May be called during program termination to clean up all resources.
              */
             static void ReleaseAll() {
-                if (!mlock) {
-                    return;
-                }
-
-                os::MutexLock lock(*mlock);
+                os::MutexLock lock(mlock);
 
                 DispatchMap::iterator result = DispatchI.begin();
                 while ( result != DispatchI.end() ) {
