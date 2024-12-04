@@ -672,6 +672,7 @@ namespace RTT {
         bool Thread::setAperiodicTriggerTimeout(NANO_TIME timeout)
         {
             aperiodicTriggerTimeout = timeout;
+            rtos_sem_signal(&sem);
             return true;
         }
     }
