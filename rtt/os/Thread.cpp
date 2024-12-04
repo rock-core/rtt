@@ -117,7 +117,11 @@ namespace RTT {
                                 rtos_sem_wait(&(task->sem)); // wait for command.
                             }
                             else {
-                                rtos_sem_wait_timed(&(task->sem), task->aperiodicTriggerTimeout); // wait for trigger.
+                                int ret = rtos_sem_wait_timed(&(task->sem), task->aperiodicTriggerTimeout); // wait for trigger.
+                                bool timed_out = (ret < 0) && (errno == ETIMEDOUT);
+                                if (timed_out) {
+                                    task->timedOut();
+                                }
                             }
 
                             task->configure();           // check for reconfigure
@@ -516,6 +520,10 @@ namespace RTT {
         }
 
         void Thread::step()
+        {
+        }
+
+        void Thread::timedOut()
         {
         }
 

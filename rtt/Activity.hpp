@@ -206,6 +206,11 @@ namespace RTT
         virtual void step();
 
         /**
+         * @see os::Thread::timedOut()
+         */
+        void timedOut() override;
+
+        /**
          * @see base::RunnableInterface::loop()
          */
         virtual void loop();

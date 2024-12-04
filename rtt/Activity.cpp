@@ -176,6 +176,10 @@ namespace RTT
         return true;
     }
 
+    void Activity::timedOut() {
+        mtimeout = true;
+    }
+
     void Activity::loop() {
         nsecs wakeup = 0;
         int overruns = 0;

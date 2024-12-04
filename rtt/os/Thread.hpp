@@ -267,6 +267,8 @@ namespace RTT
              */
             virtual void step();
 
+            virtual void timedOut();
+
             /**
              * @see base::RunnableInterface::loop()
              */
