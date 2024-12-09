@@ -189,6 +189,12 @@ void FileDescriptorActivity::setTimeout_us(int timeout_us)
         log(Error) << "Ignoring invalid timeout (" << timeout_us << ")" << endlog();
     }
 }
+
+bool FileDescriptorActivity::setAperiodicTriggerTimeout(NANO_TIME timeout) {
+    setTimeout_us(timeout / 1000);
+    return true;
+}
+
 void FileDescriptorActivity::watch(int fd)
 { RTT::os::MutexLock lock(m_lock);
     if (fd < 0)

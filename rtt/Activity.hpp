@@ -185,6 +185,8 @@ namespace RTT
 
         virtual bool setPeriod(Seconds period);
 
+        virtual bool setAperiodicTriggerTimeout(NANO_TIME timeout) override;
+
         virtual unsigned getCpuAffinity() const;
 
         virtual bool setCpuAffinity(unsigned cpu);
@@ -202,6 +204,11 @@ namespace RTT
          * @see base::RunnableInterface::step()
          */
         virtual void step();
+
+        /**
+         * @see os::Thread::timedOut()
+         */
+        void timedOut() override;
 
         /**
          * @see base::RunnableInterface::loop()

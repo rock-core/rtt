@@ -143,6 +143,14 @@ namespace RTT
         return update_period;
     }
 
+    bool Activity::setAperiodicTriggerTimeout(NANO_TIME timeout) {
+        if (timeout < 0.0)
+            return false;
+
+        Thread::setAperiodicTriggerTimeout(timeout);
+        return true;
+    }
+
     bool Activity::trigger() {
         if ( ! Thread::isActive() )
             return false;
@@ -166,6 +174,10 @@ namespace RTT
         msg_cond.broadcast();
         Thread::start();
         return true;
+    }
+
+    void Activity::timedOut() {
+        mtimeout = true;
     }
 
     void Activity::loop() {

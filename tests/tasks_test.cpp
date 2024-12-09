@@ -100,8 +100,11 @@ struct TestPeriodic
     // non-LINUX: 0
     int cpu;
 
-    TestPeriodic()
+    Seconds expectedPeriod;
+
+    TestPeriodic(Seconds expectedPeriod)
             : overfail(0), underfail(0), succ(0), stepped(false), cpu(0)
+            , expectedPeriod(expectedPeriod)
     {
     }
 
@@ -115,11 +118,11 @@ struct TestPeriodic
             stepped = true;
         } else {
             TimeService::Seconds s = TimeService::Instance()->secondsSince( ts );
-            if ( s < this->getThread()->getPeriod() *0.9 ) { // if elapsed time is smaller than 10% of period, something went wrong
+            if ( s < expectedPeriod *0.9 ) { // if elapsed time is smaller than 10% of period, something went wrong
                 ++underfail;
                 //rtos_printf("UnderFailPeriod: %f \n", s);
             }
-            else if ( s > this->getThread()->getPeriod() *1.1 ) { // if elapsed time is smaller than 10% of period, something went wrong
+            else if ( s > expectedPeriod *1.1 ) { // if elapsed time is smaller than 10% of period, something went wrong
                 ++overfail;
                 //rtos_printf("OverFailPeriod: %f \n", s);
             }
@@ -395,17 +398,40 @@ BOOST_AUTO_TEST_CASE( testThread )
 {
   bool r = false;
   // create
-  boost::scoped_ptr<TestPeriodic> run( new TestPeriodic() );
+  boost::scoped_ptr<TestPeriodic> run( new TestPeriodic(0.1) );
 
   boost::scoped_ptr<ActivityInterface> t( new Activity(ORO_SCHED_RT, os::HighestPriority, 0.1, 0, "PThread") );
   t->run( run.get() );
 
   r = t->start();
   BOOST_CHECK_MESSAGE( r, "Failed to start Thread");
-  usleep(1000*100);
+  usleep(1000*1000);
   r = t->stop();
   BOOST_CHECK_MESSAGE( r, "Failed to stop Thread" );
   BOOST_CHECK_MESSAGE( run->stepped == true, "Step not executed" );
+  BOOST_CHECK_MESSAGE(run->succ > 5, "Periodic Failure: less than 5 steps within 1s");
+  BOOST_CHECK_EQUAL_MESSAGE(run->overfail, 0, "Periodic Failure: period of step() too long !");
+  BOOST_CHECK_EQUAL_MESSAGE(run->underfail, 0, "Periodic Failure: period of step() too short!");
+}
+
+BOOST_AUTO_TEST_CASE( testAperiodicTriggerTimeout )
+{
+  bool r = false;
+  // create
+  boost::scoped_ptr<TestPeriodic> run( new TestPeriodic(0.1) );
+
+  boost::scoped_ptr<ActivityInterface> t( new Activity(ORO_SCHED_RT, os::HighestPriority, 0, 0, "PThread") );
+  t->setAperiodicTriggerTimeout(100 * 1000 * 1000);
+  //t->setAperiodicTriggerTimeout(0);
+  t->run( run.get() );
+
+  r = t->start();
+  BOOST_CHECK_MESSAGE( r, "Failed to start Thread");
+  usleep(1000*1000);
+  r = t->stop();
+  BOOST_CHECK_MESSAGE( r, "Failed to stop Thread" );
+  BOOST_CHECK_MESSAGE( run->stepped == true, "Step not executed" );
+  BOOST_CHECK_MESSAGE(run->succ > 5, "Less than 5 steps within 1s");
   BOOST_CHECK_EQUAL_MESSAGE(run->overfail, 0, "Periodic Failure: period of step() too long !");
   BOOST_CHECK_EQUAL_MESSAGE(run->underfail, 0, "Periodic Failure: period of step() too short!");
 }
@@ -447,7 +473,7 @@ BOOST_AUTO_TEST_CASE( testAffinity )
     int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
     if (1 < numCPU)
     {
-        boost::scoped_ptr<TestPeriodic> run( new TestPeriodic() );
+        boost::scoped_ptr<TestPeriodic> run( new TestPeriodic(0.1) );
         boost::scoped_ptr<Activity> t( new Activity(ORO_SCHED_RT, os::HighestPriority, 0.1, ~0, 0, "PThread") );
         // returned affinity depends on the number of actual CPUs, and won't be "~0"
         unsigned    mask=0;

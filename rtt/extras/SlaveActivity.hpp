@@ -122,6 +122,8 @@ namespace RTT
 
         bool setPeriod(Seconds s);
 
+        bool setAperiodicTriggerTimeout(NANO_TIME timeout) override;
+
         unsigned getCpuAffinity() const;
 
         bool setCpuAffinity(unsigned cpu);

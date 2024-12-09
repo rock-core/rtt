@@ -51,7 +51,7 @@ namespace RTT { namespace extras {
         the component, and similarly for \a work(TimeOut) and \a hasTimeout().
         Currently \a hasError() always returns false - there is no way to
         simulate this with the current implementation.
-     
+
         \note Component OwnThread operations are executed by the MainThread,
         which is correct for a unit test case that is directly executing.
      */
@@ -121,6 +121,9 @@ namespace RTT { namespace extras {
 
         /// Does nothing
         void setTimeout_us(int timeout_us);
+
+        /// Does nothing
+        bool setAperiodicTriggerTimeout(NANO_TIME) override { return true; };
 
         /// Return 0
         int getTimeout() const;

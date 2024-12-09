@@ -82,9 +82,9 @@ extern "C"
     static const NANO_TIME InfiniteNSecs = LLONG_MAX;
     static const double    InfiniteSeconds = DBL_MAX;
 
-#define ORO_WAIT_ABS 0 /** rtos_task_wait_period may wait less than the duration required to pad the period to 
+#define ORO_WAIT_ABS 0 /** rtos_task_wait_period may wait less than the duration required to pad the period to
                             catch-up with overrun timesteps (wait according to an absolute timeline) */
-#define ORO_WAIT_REL 1 /** rtos_task_wait_period will always pad the current timestep to the desired period, 
+#define ORO_WAIT_REL 1 /** rtos_task_wait_period will always pad the current timestep to the desired period,
                             regardless of previous overruns (wait according to a relative timeline) */
 
   typedef struct {
@@ -183,6 +183,23 @@ extern "C"
     static inline int rtos_sem_wait(rt_sem_t* m )
     {
         return sem_wait(m);
+    }
+
+    static inline int rtos_sem_wait_timed(rt_sem_t* m, NANO_TIME delay_ns)
+    {
+        const unsigned long long NSEC_PER_SEC = 1000000000ULL;
+
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+
+        long long delay_s = delay_ns / NSEC_PER_SEC;
+        long time_nsec = ts.tv_nsec + delay_ns % NSEC_PER_SEC;
+        delay_s += time_nsec / NSEC_PER_SEC;
+        time_nsec = time_nsec % NSEC_PER_SEC;
+
+        ts.tv_sec += delay_s;
+        ts.tv_nsec = time_nsec;
+        return sem_timedwait(m, &ts);
     }
 
     static inline int rtos_sem_trywait(rt_sem_t* m )
