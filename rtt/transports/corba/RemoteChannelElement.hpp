@@ -56,7 +56,7 @@ namespace RTT {
 	 * with the data. A similar mechanism is in place for a write.
 	 */
 	template<typename T>
-	class RemoteChannelElement 
+	class RemoteChannelElement
 	    : public CRemoteChannelElement_i
 	    , public base::ChannelElement<T>
 	{
@@ -69,21 +69,29 @@ namespace RTT {
 	     * In pull mode, we don't send data, just signal it and remote must read it back.
 	     */
 	    bool pull;
+        /**
+         * Whether the remote should receive a signal every time a new sample arrives
+         *
+         * In signalling and pull modes, we call remoteSignal() to send that information
+         * to the remote endpoint. Outside of pull mode, setting this to false has no
+         * effect since we are transferring the sample anyways.
+         */
+        bool signalling;
 
 	    DataFlowInterface* msender;
 
-            PortableServer::ObjectId_var oid;
+        PortableServer::ObjectId_var oid;
 
-            std::string localUri;
+        std::string localUri;
 	public:
 	    /**
 	     * Create a channel element for remote data exchange.
 	     * @param transport The type specific object that will be used to marshal the data.
 	     * @param poa The POA that manages the underlying CRemoteChannelElement_i.
 	     */
-	    RemoteChannelElement(CorbaTypeTransporter const& transport, DataFlowInterface* sender, PortableServer::POA_ptr poa, bool is_pull)
+	    RemoteChannelElement(CorbaTypeTransporter const& transport, DataFlowInterface* sender, PortableServer::POA_ptr poa, bool is_pull, bool is_signalling)
         : CRemoteChannelElement_i(transport, poa)
-        , valid(true), pull(is_pull)
+        , valid(true), pull(is_pull), signalling(is_signalling)
         , msender(sender)
             {
                 // Big note about cleanup: The RTT will dispose this object through
@@ -95,7 +103,7 @@ namespace RTT {
                 oid = mpoa->activate_object(this);
                 // Force creation of dispatcher.
                 CorbaDispatcher::Instance(msender);
-                
+
                 localUri = ApplicationServer::orb->object_to_string(_this());
             }
 
@@ -129,45 +137,53 @@ namespace RTT {
                 // Remember that signal() is called in the context of the one
                 // that wrote the data, so we must decouple here to keep hard-RT happy.
                 // the dispatch thread must read the data and send it over by calling transferSample().
-                CorbaDispatcher::Instance(msender)->dispatchChannel( this );
+                if (!pull || signalling) {
+                    CorbaDispatcher::Instance(msender)->dispatchChannel( this );
+                }
 
                 return valid;
             }
 
             virtual void transferSamples() {
-                if (!valid)
+                if (!valid) {
                     return;
-                //log(Debug) <<"transfering..." <<endlog();
-                // in push mode, transfer all data, in pull mode, only signal once for each sample.
+                }
+
                 if ( pull ) {
-                    try
-                    { remote_side->remoteSignal(); }
-#ifdef CORBA_IS_OMNIORB
-                    catch(CORBA::SystemException& e)
-                    {
-                        log(Error) << "caught CORBA exception while signalling our remote endpoint: " << e._name() << " " << e.NP_minorString() << endlog();
-                        valid = false;
-                    }
-#endif
-                    catch(CORBA::Exception& e)
-                    {
-                        log(Error) << "caught CORBA exception while signalling our remote endpoint: " << e._name() << endlog();
-                        valid = false;
+                    if (signalling) {
+                        signalRemote();
                     }
                 } else {
-                    /** This is used on to read the channel */
-                    typename base::ChannelElement<T>::value_t sample;
+                    transferSamplesToRemote();
+                }
+            }
 
-                    //log(Debug) <<"...read..."<<endlog();
-                    while ( this->read(sample, false) == NewData && valid) {
-                        //log(Debug) <<"...write..."<<endlog();
-                        if ( this->write(sample) == false )
-                            valid = false;
-                        //log(Debug) <<"...next read?..."<<endlog();
+            void signalRemote() {
+                try
+                { remote_side->remoteSignal(); }
+#ifdef CORBA_IS_OMNIORB
+                catch(CORBA::SystemException& e)
+                {
+                    log(Error) << "caught CORBA exception while signalling our remote endpoint: " << e._name() << " " << e.NP_minorString() << endlog();
+                    valid = false;
+                }
+#endif
+                catch(CORBA::Exception& e)
+                {
+                    log(Error) << "caught CORBA exception while signalling our remote endpoint: " << e._name() << endlog();
+                    valid = false;
+                }
+            }
+
+            void transferSamplesToRemote() {
+                /** This is used on to read the channel */
+                typename base::ChannelElement<T>::value_t sample;
+
+                while (this->read(sample, false) == NewData && valid) {
+                    if (this->write(sample) == false) {
+                        valid = false;
                     }
                 }
-                //log(Debug) <<"... done." <<endlog();
-
             }
 
             /**
@@ -319,7 +335,7 @@ namespace RTT {
                     // provide shared pointers. Manually increment refence count
                     // (the stack "owns" the object)
                     transport.updateAny(&const_ref_data_source, write_any);
-                    remote_side->write(write_any); 
+                    remote_side->write(write_any);
                     return true;
                 }
 #ifdef CORBA_IS_OMNIORB
@@ -376,28 +392,28 @@ namespace RTT {
             {
                 return true;
             }
-            
+
             virtual std::string getRemoteURI() const
             {
                 //check for output element case
                 RTT::base::ChannelElementBase *base = const_cast<RemoteChannelElement<T> *>(this);
                 if(base->getOutput())
                     return RTT::base::ChannelElementBase::getRemoteURI();
-                
+
                 std::string uri = ApplicationServer::orb->object_to_string(remote_side);
                 return uri;
             }
-            
+
             virtual std::string getLocalURI() const
             {
                 //check for input element case
                 RTT::base::ChannelElementBase *base = const_cast<RemoteChannelElement<T> *>(this);
                 if(base->getInput())
                     return RTT::base::ChannelElementBase::getLocalURI();
-                
+
                 return localUri;
             }
-            
+
             virtual std::string getElementName() const
             {
                 return "CorbaRemoteChannelElement";
