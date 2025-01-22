@@ -158,8 +158,10 @@ namespace RTT {
         /** This is the locking policy on the connection */
         int    lock_policy;
         /** If true, then the sink will have to pull data. Otherwise, it is pushed
-         * from the source. In both cases, the reader side is notified that new
-         * data is available by base::ChannelElementBase::signal()
+         * from the source. 
+         *
+         * When in `pull`, `signalling` determines whether or not the element
+         * will explicitly forward a signal to the remote side
          */
         bool   pull;
         /** If the connection is a buffered connection, the size of the buffer */
@@ -169,6 +171,11 @@ namespace RTT {
          * is used for inter-process or networked communication transports.
          */
         int    transport;
+        /**
+         * Whether `pull` connection will explicitly send a signal to the remote
+         * when a new sample is received. `true` is the default.
+         */
+        bool   signalling;
 
         /**
          * Suggest the payload size of the data sent over this channel. Connections

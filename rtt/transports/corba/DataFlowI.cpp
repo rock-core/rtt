@@ -392,7 +392,7 @@ CChannelElement_ptr CDataFlowInterface_i::buildChannelOutput(
 
     ChannelElementBase::shared_ptr end = type_info->buildChannelOutput(*port);
     CRemoteChannelElement_i* this_element =
-        transporter->createChannelElement_i(mdf, mpoa, corba_policy.pull);
+        transporter->createChannelElement_i(mdf, mpoa, corba_policy.pull, corba_policy.signalling);
     this_element->setCDataFlowInterface(this);
 
     /*
@@ -479,7 +479,7 @@ CChannelElement_ptr CDataFlowInterface_i::buildChannelInput(
 
     // The channel element that exposes our channel in CORBA
     CRemoteChannelElement_i* this_element;
-    PortableServer::ServantBase_var servant = this_element = transporter->createChannelElement_i(mdf, mpoa, corba_policy.pull);
+    PortableServer::ServantBase_var servant = this_element = transporter->createChannelElement_i(mdf, mpoa, corba_policy.pull, corba_policy.signalling);
     this_element->setCDataFlowInterface(this);
 
     // Attach the corba channel element first (so OOB is after corba).
