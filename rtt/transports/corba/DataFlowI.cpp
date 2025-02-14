@@ -398,11 +398,10 @@ CChannelElement_ptr CDataFlowInterface_i::buildChannelOutput(
 
     CORBA_CHECK_THREAD();
     ConnPolicy policy = toRTT(corba_policy);
-    std::string dispatcherName = dispatcherNameFromPolicy(mdf, policy);
 
     ChannelElementBase::shared_ptr end = type_info->buildChannelOutput(*port);
     CRemoteChannelElement_i* this_element =
-        transporter->createOutputChannelElement_i(dispatcherName, mpoa, corba_policy.pull, corba_policy.signalling);
+        transporter->createInputChannelElement_i(mpoa, corba_policy.pull);
     this_element->setCDataFlowInterface(this);
 
     /*
@@ -487,9 +486,10 @@ CChannelElement_ptr CDataFlowInterface_i::buildChannelInput(
     // Now create the output-side channel elements.
     ChannelElementBase::shared_ptr start = type_info->buildChannelInput(*port);
 
+    std::string dispatcherName = dispatcherNameFromPolicy(mdf, policy);
     // The channel element that exposes our channel in CORBA
     CRemoteChannelElement_i* this_element =
-        transporter->createInputChannelElement_i(mpoa, corba_policy.pull);
+        transporter->createOutputChannelElement_i(dispatcherName, mpoa, corba_policy.pull, corba_policy.signalling);
     PortableServer::ServantBase_var servant = this_element;
     this_element->setCDataFlowInterface(this);
 
