@@ -165,19 +165,6 @@ module RTT
             raises(CNoSuchPortException);
 
       /**
-       * Create the output half of a channel, from the CORBA endpoint to the input port
-       *
-       * For the output halves, there is no difference between buildChannelOutput and
-       * buildChannelOutputHalf. This method is created for consistency with
-       * buildChannelInputHalf
-       *
-       * The returned channel element will not be functional until
-       * channelReady() has been called for it
-       */
-      CChannelElement buildChannelOutputHalf(in string input_port, inout CConnPolicy policy)
-            raises(CNoCorbaTransport,CNoSuchPortException);
-
-      /**
        * Use this to write to an input port with
        * the given policy.
        * Some protocols may adjust the policy, or pass additional information
@@ -190,12 +177,6 @@ module RTT
             raises(CNoCorbaTransport,CNoSuchPortException);
 
       /**
-       * Connect the input half of the channel to its port
-       */
-      boolean connectChannelInputHalf(in string output_port, in CChannelElement channel, in CConnPolicy policy)
-            raises(CNoCorbaTransport, CNoSuchPortException, CNoSuchCorbaChannel);
-
-      /**
        * Create the half of a connection, from an output port to a CORBA channel element
        *
        * Unlike with buildChannelInput, the channel is not yet connected to the output
@@ -203,6 +184,24 @@ module RTT
        * is fully setup.
        */
       CChannelElement buildChannelInputHalf(in string output_port, inout CConnPolicy policy)
+            raises(CNoCorbaTransport,CNoSuchPortException);
+
+      /**
+       * Connect the input half of the channel to its port
+       */
+      boolean connectChannelInputHalf(in string output_port, in CChannelElement channel, in CConnPolicy policy)
+            raises(CNoCorbaTransport, CNoSuchPortException, CNoSuchCorbaChannel);
+
+      /**
+       * Create the output half of a channel, not yet connected to the input port
+       */
+      CChannelElement buildChannelOutputHalf(in string input_port, inout CConnPolicy policy)
+            raises(CNoCorbaTransport,CNoSuchPortException);
+
+      /**
+       * Create the output half of a channel, not yet connected to the input port
+       */
+      boolean connectChannelOutputHalf(in string input_port, in CChannelElement channel, in CConnPolicy policy)
             raises(CNoCorbaTransport,CNoSuchPortException);
 
       /**
