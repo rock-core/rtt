@@ -657,7 +657,7 @@ CORBA::Boolean CDataFlowInterface_i::connectChannelInputHalf(const char* output_
 }
 
 CChannelElement_ptr CDataFlowInterface_i::buildChannelOutputHalf(
-        const char* port_name, CConnPolicy & corba_policy) ACE_THROW_SPEC ((
+        const char* port_name, const CConnPolicy & corba_policy) ACE_THROW_SPEC ((
          	      CORBA::SystemException
          	      ,::RTT::corba::CNoCorbaTransport
                   ,::RTT::corba::CNoSuchPortException
@@ -704,11 +704,6 @@ CChannelElement_ptr CDataFlowInterface_i::buildChannelOutputHalf(
         if (!stream_channel_output) {
             log(Error) << "The type transporter for type "<<type_info->getTypeName()<< " failed to create an out-of-band endpoint for port " << port_name<<endlog();
             throw CNoCorbaTransport();
-        }
-
-        // if no user supplied name, pass on the new name.
-        if ( strlen( corba_policy.name_id.in()) == 0 ) {
-            corba_policy.name_id = CORBA::string_dup( policy.name_id.c_str() );
         }
 
         // override, insert oob element between corba and endpoint and add a buffer between oob and endpoint.

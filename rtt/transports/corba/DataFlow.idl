@@ -195,7 +195,7 @@ module RTT
       /**
        * Create the output half of a channel, not yet connected to the input port
        */
-      CChannelElement buildChannelOutputHalf(in string input_port, inout CConnPolicy policy)
+      CChannelElement buildChannelOutputHalf(in string input_port, in CConnPolicy policy)
             raises(CNoCorbaTransport,CNoSuchPortException);
 
       /**
