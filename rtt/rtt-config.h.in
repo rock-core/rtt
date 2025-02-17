@@ -52,6 +52,7 @@
 #define RTT_HAS_STATE_CHANGE_HOOK
 
 #cmakedefine ORO_DISABLE_PORT_DATA_SCRIPTING
+#cmakedefine ORO_NO_DISCONNECT_DATAFLOW_ON_DESTRUCTION
 
 // if not defined, show an error
 #ifndef OROCOS_TARGET
