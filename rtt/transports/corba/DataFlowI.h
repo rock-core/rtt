@@ -231,7 +231,7 @@ namespace RTT {
              *  unconnected to any input port
              */
             CChannelElement_ptr buildChannelOutputHalf(
-                const char* port_name, CConnPolicy & corba_policy
+                const char* port_name, const CConnPolicy & corba_policy
             ) ACE_THROW_SPEC ((
                     CORBA::SystemException
                     ,::RTT::corba::CNoCorbaTransport
