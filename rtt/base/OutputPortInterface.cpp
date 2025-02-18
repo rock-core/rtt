@@ -36,6 +36,7 @@
  ***************************************************************************/
 
 
+#include "../rtt-config.h"
 #include "PortInterface.hpp"
 #include "OutputPortInterface.hpp"
 #include "InputPortInterface.hpp"
@@ -52,7 +53,9 @@ OutputPortInterface::OutputPortInterface(std::string const& name)
 
 OutputPortInterface::~OutputPortInterface()
 {
+#ifndef ORO_NO_DISCONNECT_DATAFLOW_ON_DESTRUCTION
     cmanager.disconnect();
+#endif
 }
 
 /** Returns true if this port is connected */

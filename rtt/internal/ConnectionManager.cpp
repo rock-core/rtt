@@ -43,6 +43,7 @@
  *      Author: kaltan
  */
 
+#include "../rtt-config.h"
 #include "ConnectionManager.hpp"
 #include <boost/bind.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -66,7 +67,9 @@ namespace RTT
 
         ConnectionManager::~ConnectionManager()
         {
+#ifndef ORO_NO_DISCONNECT_DATAFLOW_ON_DESTRUCTION
             this->disconnect();
+#endif
         }
 
         /**
