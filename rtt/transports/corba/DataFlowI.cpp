@@ -855,5 +855,19 @@ PortableServer::POA_ptr CRemoteChannelElement_i::_default_POA()
 void CRemoteChannelElement_i::setRemoteSide(CRemoteChannelElement_ptr remote) ACE_THROW_SPEC ((
 	      CORBA::SystemException
 	    ))
-{ this->remote_side = RTT::corba::CRemoteChannelElement::_duplicate(remote); }
+{
+    RTT::os::MutexLock lock(remote_side_lock);
+    this->remote_side = RTT::corba::CRemoteChannelElement::_duplicate(remote);
+}
 
+CRemoteChannelElement_var CRemoteChannelElement_i::resetRemoteSide() {
+    RTT::os::MutexLock lock(remote_side_lock);
+    CRemoteChannelElement_var remote_side = this->remote_side;
+    this->remote_side = CRemoteChannelElement_var();
+    return remote_side;
+}
+
+CRemoteChannelElement_var CRemoteChannelElement_i::getRemoteSide() const {
+    RTT::os::MutexLock lock(remote_side_lock);
+    return remote_side;
+}
