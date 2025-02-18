@@ -92,6 +92,14 @@ module RTT
          */
         void remoteDisconnect(in boolean writer_to_reader);
 
+        /** Disconnect the local channel that includes this element
+         *
+         * Unlike disconnect, which calls the remote side internally, this
+         * method explicitly restricts itself to the local part of the channel
+         * The caller will be responsible to cleanup the other side.
+         */
+         void disconnectHalf();
+
     };
 
     /** Emitted when information is requested on a port that does not exist */

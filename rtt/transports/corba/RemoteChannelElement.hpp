@@ -152,6 +152,7 @@ namespace RTT {
             {
                 // forward too.
                 base::ChannelElementBase::signal();
+                CRemoteChannelElement_var remote_side = getRemoteSide();
                 // intercept signal if no remote side set.
                 if ( CORBA::is_nil(remote_side.in()) )
                     return true;
@@ -180,6 +181,7 @@ namespace RTT {
             }
 
             void signalRemote() {
+                CRemoteChannelElement_var remote_side = getRemoteSide();
                 try
                 { remote_side->remoteSignal(); }
 #ifdef CORBA_IS_OMNIORB
@@ -213,6 +215,8 @@ namespace RTT {
             void disconnect() ACE_THROW_SPEC ((
           	      CORBA::SystemException
           	    )) {
+                CRemoteChannelElement_var remote_side = getRemoteSide();
+
                 // disconnect both local and remote side.
                 // !!!THIS RELIES ON BEHAVIOR OF REMOTEDISCONNECT BELOW doing both writer_to_reader and !writer_to_reader !!!
                 try {
@@ -225,10 +229,22 @@ namespace RTT {
                 catch(CORBA::Exception&) {}
             }
 
+            /**
+             * CORBA IDL function.
+             */
+            void disconnectHalf() ACE_THROW_SPEC ((
+          	      CORBA::SystemException
+          	    )) {
+                resetRemoteSide();
+                this->remoteDisconnect(true);
+            }
+
             void remoteDisconnect(bool writer_to_reader) ACE_THROW_SPEC ((
           	      CORBA::SystemException
           	    ))
             {
+                resetRemoteSide();
+
                 base::ChannelElement<T>::disconnect(writer_to_reader);
 
                 // Because we support out-of-band transports, we must cleanup more thoroughly.
@@ -251,6 +267,8 @@ namespace RTT {
           	      CORBA::SystemException
           	    ))
             {
+                CRemoteChannelElement_var remote_side = resetRemoteSide();
+
                 try {
                     if ( ! CORBA::is_nil(remote_side.in()) )
                         remote_side->remoteDisconnect(writer_to_reader);
@@ -278,6 +296,8 @@ namespace RTT {
                 CFlowStatus cfs;
                 if ( (fs = base::ChannelElement<T>::read(sample, copy_old_data)) )
                     return fs;
+
+                CRemoteChannelElement_var remote_side = getRemoteSide();
 
                 // go through corba
                 CORBA::Any_var remote_value;
@@ -342,6 +362,7 @@ namespace RTT {
                 if (base::ChannelElement<T>::write(sample))
                     return true;
                 // go through corba
+                CRemoteChannelElement_var remote_side = getRemoteSide();
                 assert( remote_side.in() != 0 && "Got write() without remote side. Need buffer OR remote side but neither was present.");
                 try
                 {
@@ -421,6 +442,7 @@ namespace RTT {
                 if(base->getOutput())
                     return RTT::base::ChannelElementBase::getRemoteURI();
 
+                CRemoteChannelElement_var remote_side = getRemoteSide();
                 std::string uri = ApplicationServer::orb->object_to_string(remote_side);
                 return uri;
             }
@@ -444,4 +466,3 @@ namespace RTT {
 }
 
 #endif
-

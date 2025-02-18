@@ -70,12 +70,17 @@ namespace RTT {
             : public POA_RTT::corba::CRemoteChannelElement
             , public virtual PortableServer::RefCountServantBase
         {
-        protected:
+        private:
+            mutable RTT::os::Mutex remote_side_lock;
             CRemoteChannelElement_var remote_side;
+
+        protected:
             RTT::corba::CorbaTypeTransporter const& transport;
             PortableServer::POA_var mpoa;
             CDataFlowInterface_i* mdataflow;
 
+            CRemoteChannelElement_var resetRemoteSide();
+            CRemoteChannelElement_var getRemoteSide() const;
         public:
             // standard constructor
             CRemoteChannelElement_i(corba::CorbaTypeTransporter const& transport,
