@@ -67,11 +67,15 @@ namespace RTT {
             };
             typedef std::map<std::string, DispatchEntry> DispatchMap;
             RTT_CORBA_API static DispatchMap DispatchI;
+            typedef std::map<DataFlowInterface*, CorbaDispatcher*> InstanceMap;
+            RTT_CORBA_API static InstanceMap Instances;
 
             typedef internal::List<base::ChannelElementBase::shared_ptr> RCList;
             RCList RClist;
 
             bool do_exit;
+
+            static CorbaDispatcher* AcquireNolock(std::string const& name, int scheduler, int priority);
 
             /* Protects DispatchI */
             RTT_CORBA_API static os::Mutex mlock;
@@ -105,13 +109,54 @@ namespace RTT {
 
             static std::string defaultDispatcherName(DataFlowInterface* iface);
 
+            /** @deprecated Return the per-dataflow interface corba dispatcher instance. Use Acquire and Deref instead.
+             *
+             * Unlike with the \c Acquire and \c Deref pair, \c Release must be called
+             * only once to free (and therefore delete) the dispatcher.
+             */
             static CorbaDispatcher* Instance(DataFlowInterface* iface, int scheduler = defaultScheduler, int priority = defaultPriority);
-            static CorbaDispatcher* Instance(std::string const& name, int scheduler = defaultScheduler, int priority = defaultPriority);
-            static CorbaDispatcher* Acquire(DataFlowInterface* interface, int scheduler = defaultScheduler, int priority = defaultPriority);
+
+            /** @deprecated Delete the dispatcher created by \c Instance. Use Acquire and Deref instead.
+             *
+             * Unlike with Acquire/Deref, Release must be called only once to
+             * free (and therefore delete) the dispatcher.
+             */
+            static void Release(DataFlowInterface* interface);
+
+            /** @deprecated Delete all the dispatchers craeted by \c Instance
+             *
+             * You usually will want to call this at the end of your main if you are
+             * still using \c Instance. It is unneeded for code that uses \c Acquire
+             * and \c Deref
+             */
+            static void ReleaseAll();
+
+            /** Get the corba dispatcher with the given name and increment its reference
+             * count
+             *
+             * The dispatcher must be released by calling Deref the same number of times
+             * it has been Acquired
+             *
+             * This is thread-safe
+             */
             static CorbaDispatcher* Acquire(std::string const& name, int scheduler = defaultScheduler, int priority = defaultPriority);
 
-            static void Release(std::string const& name);
-            static void Release(CorbaDispatcher* dispatcher);
+            /** Decrement the reference count of the given dispatcher and delete it if it
+             * is zero
+             *
+             * This is thread-safe
+             */
+            static void Deref(std::string const& name);
+
+            /** Test whether there is a dispatcher with the default name
+             * for this dataflow interface
+             */
+            static bool hasDispatcher(DataFlowInterface* interface);
+
+            /** Test whether there is a dispatcher with the default name
+             * for this dataflow interface
+             */
+            static bool hasDispatcher(std::string const& name);
 
             void dispatchChannel( base::ChannelElementBase::shared_ptr chan );
             void cancelChannel( base::ChannelElementBase::shared_ptr chan );

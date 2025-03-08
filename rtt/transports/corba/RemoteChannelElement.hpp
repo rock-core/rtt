@@ -128,8 +128,9 @@ namespace RTT {
 
             ~RemoteChannelElement()
             {
-                if (mdispatcher)
-                    CorbaDispatcher::Release(mdispatcher);
+                if (mdispatcher) {
+                    CorbaDispatcher::Deref(mdispatcher->getName());
+                }
             }
 
             /** Increase the reference count, called from the CORBA side */

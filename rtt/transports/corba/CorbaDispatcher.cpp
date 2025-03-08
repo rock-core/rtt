@@ -43,6 +43,7 @@ using namespace RTT;
 using namespace RTT::corba;
 
 CorbaDispatcher::DispatchMap CorbaDispatcher::DispatchI;
+CorbaDispatcher::InstanceMap CorbaDispatcher::Instances;
 os::Mutex CorbaDispatcher::mlock;
 
 int CorbaDispatcher::defaultScheduler = ORO_SCHED_RT;
@@ -60,7 +61,45 @@ CorbaDispatcher::DispatchEntry& CorbaDispatcher::Get(std::string const& name, in
 }
 
 CorbaDispatcher* CorbaDispatcher::Instance(DataFlowInterface* iface, int scheduler, int priority) {
-    return Instance(defaultDispatcherName(iface), scheduler, priority);
+    os::MutexLock lock(mlock);
+    InstanceMap::const_iterator result = Instances.find(iface);
+    if (result != Instances.end()) {
+        return result->second;
+    }
+
+    CorbaDispatcher* dispatcher = AcquireNolock(
+        defaultDispatcherName(iface), scheduler, priority
+    );
+    Instances.insert(std::make_pair(iface, dispatcher));
+    return dispatcher;
+}
+
+void CorbaDispatcher::Release(DataFlowInterface* iface) {
+    {
+        os::MutexLock lock(mlock);
+        InstanceMap::const_iterator result = Instances.find(iface);
+        if (result == Instances.end()) {
+            return;
+        }
+
+        Instances.erase(result);
+    }
+
+    Deref(defaultDispatcherName(iface));
+}
+
+void CorbaDispatcher::ReleaseAll() {
+    InstanceMap instances;
+
+    {
+        os::MutexLock lock(mlock);
+        instances = Instances;
+        Instances.clear();
+    }
+
+    for (auto it: instances) {
+        Deref(defaultDispatcherName(it.first));
+    }
 }
 
 std::string CorbaDispatcher::defaultDispatcherName(DataFlowInterface* iface)
@@ -73,36 +112,18 @@ std::string CorbaDispatcher::defaultDispatcherName(DataFlowInterface* iface)
     return name + ".CorbaDispatch." + boost::lexical_cast<std::string>(reinterpret_cast<uint64_t>(iface));
 }
 
-/**
- * Create a new dispatcher and registers it under a certain name
- *
- * @param name the dispatcher registration name
- * @return
- */
-CorbaDispatcher* CorbaDispatcher::Instance(std::string const& name, int scheduler, int priority) {
-    os::MutexLock lock(mlock);
-
-    return Get(name, scheduler, priority).dispatcher;
-}
-
-
-CorbaDispatcher* CorbaDispatcher::Acquire(RTT::DataFlowInterface* interface, int scheduler, int priority) {
-    return Acquire(defaultDispatcherName(interface), scheduler, priority);
-}
-
 CorbaDispatcher* CorbaDispatcher::Acquire(std::string const& name, int scheduler, int priority) {
     os::MutexLock lock(mlock);
+    return AcquireNolock(name, scheduler, priority);
+}
 
+CorbaDispatcher* CorbaDispatcher::AcquireNolock(std::string const& name, int scheduler, int priority) {
     DispatchEntry& entry = Get(name, scheduler, priority);
     entry.refcount.inc();
     return entry.dispatcher;
 }
 
-void CorbaDispatcher::Release(CorbaDispatcher* dispatcher) {
-    return Release(dispatcher->getName());
-}
-
-void CorbaDispatcher::Release(std::string const& name) {
+void CorbaDispatcher::Deref(std::string const& name) {
     CorbaDispatcher* dispatcher = nullptr;
 
     {
@@ -122,6 +143,18 @@ void CorbaDispatcher::Release(std::string const& name) {
     }
 
     delete dispatcher;
+}
+
+bool CorbaDispatcher::hasDispatcher(DataFlowInterface* interface) {
+    auto name = defaultDispatcherName(interface);
+    os::MutexLock lock(mlock);
+    return hasDispatcher(name);
+}
+
+bool CorbaDispatcher::hasDispatcher(std::string const& name) {
+    os::MutexLock lock(mlock);
+    DispatchMap::iterator result = DispatchI.find(name);
+    return (result != DispatchI.end());
 }
 
 static void hasElement(base::ChannelElementBase::shared_ptr c0, base::ChannelElementBase::shared_ptr c1, bool& result)
