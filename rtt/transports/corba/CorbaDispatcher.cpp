@@ -142,6 +142,12 @@ void CorbaDispatcher::Deref(std::string const& name) {
         DispatchI.erase(result);
     }
 
+    if (!dispatcher) {
+        return;
+    }
+
+    dispatcher->stop();
+    dispatcher->terminate();
     delete dispatcher;
 }
 
