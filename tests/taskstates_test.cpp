@@ -809,10 +809,12 @@ struct calling_stop_concurrently_with_updateHook_calling_exception_works_as_expe
 {
     calling_stop_concurrently_with_updateHook_calling_exception_works_as_expected()
         : RTT::TaskContext("test", RTT::TaskContext::PreOperational)
-        , stopHookCalled(0) {}
+        , stopHookCalled(0)
+        , inUpdateHook(false) {}
 
     void updateHook()
     {
+        inUpdateHook = true;
         usleep(100000);
         exception();
     }
@@ -822,6 +824,7 @@ struct calling_stop_concurrently_with_updateHook_calling_exception_works_as_expe
     }
 
     int stopHookCalled;
+    bool inUpdateHook;
 };
 BOOST_AUTO_TEST_CASE(test_calling_stop_concurrently_with_updateHook_calling_exception_works_as_expected) {
     calling_stop_concurrently_with_updateHook_calling_exception_works_as_expected task;
@@ -829,6 +832,10 @@ BOOST_AUTO_TEST_CASE(test_calling_stop_concurrently_with_updateHook_calling_exce
     task.start();
     BOOST_REQUIRE(!task.inException());
     task.trigger();
+    while(!task.inUpdateHook) {
+        usleep(1000);
+    }
+    BOOST_REQUIRE(!task.inException());
     task.stop();
     BOOST_REQUIRE_EQUAL(1, task.stopHookCalled);
     BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
