@@ -138,7 +138,7 @@ struct TestPeriodic
 #endif
     }
     void finalize() {
-        if (overfail || underfail)
+        if (overfail || (underfail > 1))
             cerr <<"overfail is:"<<overfail<<", underfail is:"<<underfail<< " success is: "<<succ<<endl;
     }
 
@@ -433,7 +433,9 @@ BOOST_AUTO_TEST_CASE( testAperiodicTriggerTimeout )
   BOOST_CHECK_MESSAGE( run->stepped == true, "Step not executed" );
   BOOST_CHECK_MESSAGE(run->succ > 5, "Less than 5 steps within 1s");
   BOOST_CHECK_EQUAL_MESSAGE(run->overfail, 0, "Periodic Failure: period of step() too long !");
-  BOOST_CHECK_EQUAL_MESSAGE(run->underfail, 0, "Periodic Failure: period of step() too short!");
+  // setAperiodicTriggerTimeout wakes up the thread. Since the triggering is done using
+  // a semaphore, we get two wakeups on start.
+  BOOST_CHECK_MESSAGE(run->underfail <= 1, "Periodic Failure: period of step() too short!");
 }
 
 #if defined( OROCOS_TARGET_GNULINUX )
