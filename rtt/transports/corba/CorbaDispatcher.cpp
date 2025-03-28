@@ -37,12 +37,130 @@
 
 
 #include "CorbaDispatcher.hpp"
+#include <boost/lexical_cast.hpp>
 
-namespace RTT {
-    using namespace corba;
-    CorbaDispatcher::DispatchMap CorbaDispatcher::DispatchI;
-    os::Mutex CorbaDispatcher::mlock;
+using namespace RTT;
+using namespace RTT::corba;
 
-    int CorbaDispatcher::defaultScheduler = ORO_SCHED_RT;
-    int CorbaDispatcher::defaultPriority  = os::LowestPriority;
+CorbaDispatcher::DispatchMap CorbaDispatcher::DispatchI;
+os::Mutex CorbaDispatcher::mlock;
+
+int CorbaDispatcher::defaultScheduler = ORO_SCHED_RT;
+int CorbaDispatcher::defaultPriority  = os::LowestPriority;
+
+CorbaDispatcher::DispatchEntry& CorbaDispatcher::Get(std::string const& name, int scheduler, int priority)
+{
+    DispatchMap::iterator result = DispatchI.find(name);
+    if ( result != DispatchI.end() )
+        return result->second;
+
+    CorbaDispatcher* dispatcher = new CorbaDispatcher( name, scheduler, priority );
+    dispatcher->start();
+    return (DispatchI[name] = DispatchEntry(dispatcher));
+}
+
+CorbaDispatcher* CorbaDispatcher::Instance(DataFlowInterface* iface, int scheduler, int priority) {
+    return Instance(defaultDispatcherName(iface), scheduler, priority);
+}
+
+std::string CorbaDispatcher::defaultDispatcherName(DataFlowInterface* iface)
+{
+    std::string name;
+    if ( iface == 0 || iface->getOwner() == 0)
+        name = "Global";
+    else
+        name = iface->getOwner()->getName();
+    return name + ".CorbaDispatch." + boost::lexical_cast<std::string>(reinterpret_cast<uint64_t>(iface));
+}
+
+/**
+ * Create a new dispatcher and registers it under a certain name
+ *
+ * @param name the dispatcher registration name
+ * @return
+ */
+CorbaDispatcher* CorbaDispatcher::Instance(std::string const& name, int scheduler, int priority) {
+    os::MutexLock lock(mlock);
+
+    return Get(name, scheduler, priority).dispatcher;
+}
+
+
+CorbaDispatcher* CorbaDispatcher::Acquire(RTT::DataFlowInterface* interface, int scheduler, int priority) {
+    return Acquire(defaultDispatcherName(interface), scheduler, priority);
+}
+
+CorbaDispatcher* CorbaDispatcher::Acquire(std::string const& name, int scheduler, int priority) {
+    os::MutexLock lock(mlock);
+
+    DispatchEntry& entry = Get(name, scheduler, priority);
+    entry.refcount.inc();
+    return entry.dispatcher;
+}
+
+void CorbaDispatcher::Release(CorbaDispatcher* dispatcher) {
+    return Release(dispatcher->getName());
+}
+
+void CorbaDispatcher::Release(std::string const& name) {
+    CorbaDispatcher* dispatcher = nullptr;
+
+    {
+        os::MutexLock lock(mlock);
+
+        DispatchMap::iterator result = DispatchI.find(name);
+        if (result == DispatchI.end()) {
+            return;
+        }
+
+        if (!result->second.refcount.dec_and_test()) {
+            return;
+        }
+
+        dispatcher = result->second.dispatcher;
+        DispatchI.erase(result);
+    }
+
+    delete dispatcher;
+}
+
+static void hasElement(base::ChannelElementBase::shared_ptr c0, base::ChannelElementBase::shared_ptr c1, bool& result)
+{
+    result = result || (c0 == c1);
+}
+
+void CorbaDispatcher::dispatchChannel( base::ChannelElementBase::shared_ptr chan ) {
+    bool has_element = false;
+    RClist.apply(boost::bind(&hasElement, _1, chan, boost::ref(has_element)));
+    if (!has_element) {
+        while (!RClist.append( chan )) {
+            RClist.grow(20);
+        }
+    }
+    this->trigger();
+}
+
+void CorbaDispatcher::cancelChannel( base::ChannelElementBase::shared_ptr chan ) {
+    RClist.erase( chan );
+}
+
+bool CorbaDispatcher::initialize() {
+    log(Info) <<"Started " << this->getName() << "." <<endlog();
+    do_exit = false;
+    return true;
+}
+
+void CorbaDispatcher::loop() {
+    while ( !RClist.empty() && !do_exit) {
+        base::ChannelElementBase::shared_ptr chan = RClist.front();
+        CRemoteChannelElement_i* rbase = dynamic_cast<CRemoteChannelElement_i*>(chan.get());
+        if (rbase)
+            rbase->transferSamples();
+        RClist.erase( chan );
+    }
+}
+
+bool CorbaDispatcher::breakLoop() {
+    do_exit = true;
+    return true;
 }
