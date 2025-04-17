@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "unit.hpp"
+#include <transports/corba/corba.h>
 
 #include <iostream>
 #include <memory>
@@ -34,6 +35,7 @@
 #include <transports/corba/TaskContextServer.hpp>
 #include <transports/corba/TaskContextProxy.hpp>
 #include <transports/corba/CorbaLib.hpp>
+#include <transports/corba/CorbaDispatcher.hpp>
 #include <rtt/internal/DataSourceTypeInfo.hpp>
 
 #include <string>
@@ -556,16 +558,66 @@ BOOST_AUTO_TEST_CASE( testPortProxying )
     mo->disconnect();
 }
 
-BOOST_AUTO_TEST_CASE( testDataHalfs )
+class RTT_CORBA_API CTestRemoteChannelElement_i
+    : public POA_RTT::corba::CRemoteChannelElement
+    , public virtual PortableServer::RefCountServantBase
+{
+public:
+    int transfer_samples;
+    int read_samples;
+    int write_samples;
+    PortableServer::POA_var mpoa;
+
+    // standard constructor
+    CTestRemoteChannelElement_i(PortableServer::POA_ptr poa)
+        : transfer_samples(0)
+        , read_samples(0)
+        , write_samples(0)
+        , mpoa(PortableServer::POA::_duplicate(poa)) {}
+    virtual ~CTestRemoteChannelElement_i() {}
+
+    virtual RTT::corba::CRemoteChannelElement_ptr activate_this() {
+        PortableServer::ObjectId_var oid = mpoa->activate_object(this); // ref count=2
+        _remove_ref(); // ref count=1
+        return _this();
+    }
+
+    virtual void transferSamples() {
+        transfer_samples++;
+    }
+
+    PortableServer::POA_ptr _default_POA() {
+        return mpoa;
+    }
+    CFlowStatus read(::CORBA::Any_out sample, bool copy_old_data)
+        ACE_THROW_SPEC (( CORBA::SystemException )) {
+        read_samples++;
+        return CNewData;
+    }
+    bool write(const ::CORBA::Any& sample)
+        ACE_THROW_SPEC (( CORBA::SystemException)) {
+        write_samples++;
+        return true;
+    }
+    void remoteSignal() ACE_THROW_SPEC (( CORBA::SystemException )) {}
+    void disconnect() ACE_THROW_SPEC (( CORBA::SystemException )) {}
+    void remoteDisconnect(bool writer_to_reader)
+        ACE_THROW_SPEC (( CORBA::SystemException )) {}
+    void disconnect(bool writer_to_reader)
+        ACE_THROW_SPEC (( CORBA::SystemException )) {}
+    void setRemoteSide(CRemoteChannelElement_ptr remote)
+        ACE_THROW_SPEC (( CORBA::SystemException )) {}
+};
+
+BOOST_AUTO_TEST_CASE( it_selects_the_dispatcher_given_to_the_policy_name )
 {
     if(std::getenv("CI") != NULL) {
       BOOST_TEST_MESSAGE("Skipping testDataHalfs because it can fail on integration servers.");
       return;
     }
 
-    double result;
     // This test tests the differen port-to-port connections.
-    tp = corba::TaskContextProxy::Create( "peerDH" , /* is_ior = */ false);
+    tp = corba::TaskContextProxy::Create( "peerDH", /* is_ior = */ false ); // no-ior
     if (!tp )
         tp = corba::TaskContextProxy::CreateFromFile( "peerDH.ior");
 
@@ -574,52 +626,35 @@ BOOST_AUTO_TEST_CASE( testDataHalfs )
     // Create a default CORBA policy specification
     RTT::corba::CConnPolicy policy = toCORBA(ConnPolicy::data());
     policy.init = false;
-    policy.transport = ORO_CORBA_PROTOCOL_ID; // force creation of non-local connections
+    policy.transport = ORO_CORBA_PROTOCOL_ID;
+    policy.name_id = "test";
+    policy.pull = false; // note: buildChannelInput must correct policy to pull = true (adds a buffer).
+
+    BOOST_REQUIRE(!CorbaDispatcher::hasDispatcher("test"));
 
     corba::CDataFlowInterface_var ports  = s->ports();
     BOOST_REQUIRE( ports.in() );
 
     // test unbuffered C++ write --> Corba read
-    policy.pull = false; // note: buildChannelInput must correct policy to pull = true (adds a buffer).
-    mo->connectTo( tp->ports()->getPort("mi"), toRTT(policy)  );
-    CChannelElement_var cce = ports->buildChannelInput("mo", policy);
-    CORBA::Any_var sample;
-    BOOST_REQUIRE( cce.in() );
+    mo->connectTo(tp->ports()->getPort("mi"), toRTT(policy));
+    CRemoteChannelElement_var cce =
+        CRemoteChannelElement::_narrow(ports->buildChannelInput("mo", policy));
 
-    // Check read of new data
+    BOOST_REQUIRE(CorbaDispatcher::hasDispatcher("test"));
+    auto dispatcher = CorbaDispatcher::Acquire("test");
+    dispatcher->stop();
+
+    auto receiver_element =
+        new CTestRemoteChannelElement_i(ApplicationServer::rootPOA);
+    CRemoteChannelElement_var remote_element(receiver_element->_this());
+    cce->setRemoteSide(remote_element);
+
     mo->write( 3.33 );
-    wait_for_equal( cce->read( sample.out(), true), CNewData, 5 );
-    sample >>= result;
-    BOOST_CHECK_EQUAL( result, 3.33);
-
-    // Check re-read of old data.
-    sample <<= 0.0;
-    BOOST_CHECK_EQUAL( cce->read( sample.out(), true), COldData );
-    sample >>= result;
-    BOOST_CHECK_EQUAL( result, 3.33);
-
-    cce->disconnect();
-    mo->disconnect();
-
-    // test unbuffered Corba write --> C++ read
-    cce = ports->buildChannelOutput("mi", policy);
-    ports->channelReady("mi", cce, policy);
-
-    mi->connectTo( tp->ports()->getPort("mo"), toRTT(policy) );
-    sample = new CORBA::Any();
-    BOOST_REQUIRE( cce.in() );
-
-    // Check read of new data
-    result = 0.0;
-    sample <<= 4.44;
-    cce->write( sample.in() );
-    wait_for_equal( mi->read( result ), NewData, 5 );
-    BOOST_CHECK_EQUAL( result, 4.44 );
-
-    // Check re-read of old data.
-    result = 0.0;
-    BOOST_CHECK_EQUAL( mi->read( result ), OldData );
-    BOOST_CHECK_EQUAL( result, 4.44);
+    usleep(100000);
+    BOOST_REQUIRE_EQUAL(0, receiver_element->write_samples);
+    dispatcher->start();
+    usleep(100000);
+    BOOST_REQUIRE_EQUAL(1, receiver_element->write_samples);
 }
 
 BOOST_AUTO_TEST_CASE( testBufferHalfs )

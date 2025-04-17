@@ -871,6 +871,21 @@ BOOST_AUTO_TEST_CASE( testBufferHalfs )
     BOOST_CHECK_EQUAL( result, 4.44);
 }
 
+BOOST_AUTO_TEST_CASE(CorbaDispatcher_instances_are_created_and_refcounted) {
+    std::unique_ptr<RTT::DataFlowInterface> iface(new RTT::DataFlowInterface());
+
+    auto instance = CorbaDispatcher::Acquire("test_dispatcher");
+    BOOST_CHECK_EQUAL("test_dispatcher", instance->getName());
+
+    auto instance2 = CorbaDispatcher::Acquire("test_dispatcher");
+    BOOST_CHECK_EQUAL(instance2, instance);
+
+    CorbaDispatcher::Deref("test_dispatcher");
+    BOOST_CHECK(CorbaDispatcher::hasDispatcher("test_dispatcher"));
+    CorbaDispatcher::Deref("test_dispatcher");
+    BOOST_CHECK(!CorbaDispatcher::hasDispatcher("test_dispatcher"));
+}
+
 BOOST_AUTO_TEST_CASE(multiple_CorbaDispatcher_Instance_calls_are_released_by_a_single_Release) {
     std::unique_ptr<RTT::DataFlowInterface> iface(new RTT::DataFlowInterface());
 
