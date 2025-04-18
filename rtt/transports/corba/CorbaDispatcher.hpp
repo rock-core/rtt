@@ -56,19 +56,29 @@ namespace RTT {
          */
         class CorbaDispatcher : public Activity
         {
-            typedef std::map<DataFlowInterface*,CorbaDispatcher*> DispatchMap;
+            struct DispatchEntry {
+                os::AtomicInt refcount;
+                CorbaDispatcher* dispatcher;
+
+                DispatchEntry()
+                    : dispatcher(0) {}
+                explicit DispatchEntry(CorbaDispatcher* dispatcher)
+                    : dispatcher(dispatcher) {}
+            };
+            typedef std::map<std::string, DispatchEntry> DispatchMap;
             RTT_CORBA_API static DispatchMap DispatchI;
+            typedef std::map<DataFlowInterface*, CorbaDispatcher*> InstanceMap;
+            RTT_CORBA_API static InstanceMap Instances;
 
             typedef internal::List<base::ChannelElementBase::shared_ptr> RCList;
             RCList RClist;
 
             bool do_exit;
 
+            static CorbaDispatcher* AcquireNolock(std::string const& name, int scheduler, int priority);
+
             /* Protects DispatchI */
             RTT_CORBA_API static os::Mutex mlock;
-
-            RTT_CORBA_API static int defaultScheduler;
-            RTT_CORBA_API static int defaultPriority;
 
             CorbaDispatcher( const std::string& name)
             : Activity(defaultScheduler, defaultPriority, 0.0, 0, name),
@@ -86,99 +96,75 @@ namespace RTT {
                 this->stop();
             }
 
+            /** Internal access and auto-creation of dispatch entries
+             *
+             * It is a helper method, and does NOT acquire the locking mutex.
+             * Callers MUST acquire it before calling
+             */
+            static DispatchEntry& Get(std::string const& name, int scheduler = defaultScheduler, int priority = defaultPriority);
+
         public:
-            /**
-             * Create a new dispatcher for a given data flow interface.
-             * This method will only lock and allocate when a new dispatcher must be created,
-             * otherwise, the access is lock-free and real-time.
-             * One dispatcher per \a iface is created.
-             * @param iface The interface to dispatch data flow messages for.
-             * @return
+            RTT_CORBA_API static int defaultScheduler;
+            RTT_CORBA_API static int defaultPriority;
+
+            static std::string defaultDispatcherName(DataFlowInterface* iface);
+
+            /** @deprecated Return the per-dataflow interface corba dispatcher instance. Use Acquire and Deref instead.
+             *
+             * Unlike with the \c Acquire and \c Deref pair, \c Release must be called
+             * only once to free (and therefore delete) the dispatcher.
              */
-            static CorbaDispatcher* Instance(DataFlowInterface* iface, int scheduler = defaultScheduler, int priority = defaultPriority) {
-                os::MutexLock lock(mlock);
-                DispatchMap::iterator result = DispatchI.find(iface);
-                if ( result == DispatchI.end() ) {
-                    std::string name;
-                    if ( iface == 0 || iface->getOwner() == 0)
-                        name = "Global";
-                    else
-                        name = iface->getOwner()->getName();
-                    name += "Corba";
-                    DispatchI[iface] = new CorbaDispatcher( name, scheduler, priority );
-                    DispatchI[iface]->start();
-                    return DispatchI[iface];
-                }
-                return result->second;
-            }
+            static CorbaDispatcher* Instance(DataFlowInterface* iface, int scheduler = defaultScheduler, int priority = defaultPriority);
 
-            /**
-             * Releases and cleans up a specific interface from dispatching.
-             * @param iface
+            /** @deprecated Delete the dispatcher created by \c Instance. Use Acquire and Deref instead.
+             *
+             * Unlike with Acquire/Deref, Release must be called only once to
+             * free (and therefore delete) the dispatcher.
              */
-            static void Release(DataFlowInterface* iface) {
-                os::MutexLock lock(mlock);
-                DispatchMap::iterator result = DispatchI.find(iface);
-                if ( result != DispatchI.end() ) {
-                    delete result->second;
-                    DispatchI.erase(result);
-                }
-            }
+            static void Release(DataFlowInterface* interface);
 
-            /**
-             * May be called during program termination to clean up all resources.
+            /** @deprecated Delete all the dispatchers craeted by \c Instance
+             *
+             * You usually will want to call this at the end of your main if you are
+             * still using \c Instance. It is unneeded for code that uses \c Acquire
+             * and \c Deref
              */
-            static void ReleaseAll() {
-                os::MutexLock lock(mlock);
+            static void ReleaseAll();
 
-                DispatchMap::iterator result = DispatchI.begin();
-                while ( result != DispatchI.end() ) {
-                    delete result->second;
-                    DispatchI.erase(result);
-                    result = DispatchI.begin();
-                }
-            }
+            /** Get the corba dispatcher with the given name and increment its reference
+             * count
+             *
+             * The dispatcher must be released by calling Deref the same number of times
+             * it has been Acquired
+             *
+             * This is thread-safe
+             */
+            static CorbaDispatcher* Acquire(std::string const& name, int scheduler = defaultScheduler, int priority = defaultPriority);
 
-            static void hasElement(base::ChannelElementBase::shared_ptr c0, base::ChannelElementBase::shared_ptr c1, bool& result)
-            {
-                result = result || (c0 == c1);
-            }
+            /** Decrement the reference count of the given dispatcher and delete it if it
+             * is zero
+             *
+             * This is thread-safe
+             */
+            static void Deref(std::string const& name);
 
-            void dispatchChannel( base::ChannelElementBase::shared_ptr chan ) {
-                bool has_element = false;
-                RClist.apply(boost::bind(&CorbaDispatcher::hasElement, _1, chan, boost::ref(has_element)));
-                if (!has_element) {
-                    while (!RClist.append( chan )) {
-                        RClist.grow(20);
-                    }
-                }
-                this->trigger();
-            }
+            /** Test whether there is a dispatcher with the default name
+             * for this dataflow interface
+             */
+            static bool hasDispatcher(DataFlowInterface* interface);
 
-            void cancelChannel( base::ChannelElementBase::shared_ptr chan ) {
-                RClist.erase( chan );
-            }
+            /** Test whether there is a dispatcher with the default name
+             * for this dataflow interface
+             */
+            static bool hasDispatcher(std::string const& name);
 
-            bool initialize() {
-                log(Info) <<"Started " << this->getName() << "." <<endlog();
-                do_exit = false;
-                return true;
-            }
+            void dispatchChannel( base::ChannelElementBase::shared_ptr chan );
+            void cancelChannel( base::ChannelElementBase::shared_ptr chan );
 
-            void loop() {
-                while ( !RClist.empty() && !do_exit) {
-                    base::ChannelElementBase::shared_ptr chan = RClist.front();
-                    CRemoteChannelElement_i* rbase = dynamic_cast<CRemoteChannelElement_i*>(chan.get());
-                    if (rbase)
-                        rbase->transferSamples();
-                    RClist.erase( chan );
-                }
-            }
+            bool initialize();
 
-            bool breakLoop() {
-                do_exit = true;
-                return true;
-            }
+            void loop();
+            bool breakLoop();
         };
     }
 }

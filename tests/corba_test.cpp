@@ -34,6 +34,7 @@
 #include <transports/corba/CorbaLib.hpp>
 #include <transports/corba/CorbaConnPolicy.hpp>
 #include <transports/corba/RTTCorbaConversion.hpp>
+#include <transports/corba/CorbaDispatcher.hpp>
 
 #include "operations_fixture.hpp"
 
@@ -41,6 +42,7 @@
 
 using namespace std;
 using corba::TaskContextProxy;
+using corba::CorbaDispatcher;
 
 class CorbaTest : public OperationsFixture
 {
@@ -411,7 +413,7 @@ BOOST_AUTO_TEST_CASE( testOperationCallerC_Send )
     BOOST_CHECK_EQUAL( r, 0.0 );
     BOOST_CHECK_EQUAL( cr, -5.0 );
 
-    
+
     mc = tp->provides("methods")->create("m0except", caller->engine());
     BOOST_CHECK_NO_THROW( mc.check() );
     shc = mc.send();
@@ -867,6 +869,47 @@ BOOST_AUTO_TEST_CASE( testBufferHalfs )
     result = 0.0;
     BOOST_CHECK_EQUAL( mi1->read( result ), OldData );
     BOOST_CHECK_EQUAL( result, 4.44);
+}
+
+BOOST_AUTO_TEST_CASE(CorbaDispatcher_instances_are_created_and_refcounted) {
+    std::unique_ptr<RTT::DataFlowInterface> iface(new RTT::DataFlowInterface());
+
+    auto instance = CorbaDispatcher::Acquire("test_dispatcher");
+    BOOST_CHECK_EQUAL("test_dispatcher", instance->getName());
+
+    auto instance2 = CorbaDispatcher::Acquire("test_dispatcher");
+    BOOST_CHECK_EQUAL(instance2, instance);
+
+    CorbaDispatcher::Deref("test_dispatcher");
+    BOOST_CHECK(CorbaDispatcher::hasDispatcher("test_dispatcher"));
+    CorbaDispatcher::Deref("test_dispatcher");
+    BOOST_CHECK(!CorbaDispatcher::hasDispatcher("test_dispatcher"));
+}
+
+BOOST_AUTO_TEST_CASE(multiple_CorbaDispatcher_Instance_calls_are_released_by_a_single_Release) {
+    std::unique_ptr<RTT::DataFlowInterface> iface(new RTT::DataFlowInterface());
+
+    auto instance = CorbaDispatcher::Instance(iface.get());
+    auto name = instance->getName();
+    BOOST_CHECK_EQUAL(instance, CorbaDispatcher::Instance(iface.get()));
+    BOOST_CHECK(CorbaDispatcher::hasDispatcher(name));
+    CorbaDispatcher::Release(iface.get());
+    BOOST_CHECK(!CorbaDispatcher::hasDispatcher(name));
+}
+
+BOOST_AUTO_TEST_CASE(multiple_CorbaDispatcher_Instance_calls_are_released_by_a_single_ReleaseAll) {
+    auto iface0 = make_unique<RTT::DataFlowInterface>();
+    auto dispatcher0 = CorbaDispatcher::Instance(iface0.get());
+    CorbaDispatcher::Instance(iface0.get());
+    auto name0 = dispatcher0->getName();
+    auto iface1 = make_unique<RTT::DataFlowInterface>();
+    auto dispatcher1 = CorbaDispatcher::Instance(iface1.get());
+    CorbaDispatcher::Instance(iface1.get());
+    auto name1 = dispatcher1->getName();
+
+    CorbaDispatcher::ReleaseAll();
+    BOOST_CHECK(!CorbaDispatcher::hasDispatcher(name0));
+    BOOST_CHECK(!CorbaDispatcher::hasDispatcher(name1));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

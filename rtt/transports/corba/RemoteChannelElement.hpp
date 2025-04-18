@@ -78,37 +78,59 @@ namespace RTT {
          */
         bool signalling;
 
-	    DataFlowInterface* msender;
+	    DataFlowInterface* msender = nullptr;
+        CorbaDispatcher* mdispatcher = nullptr;
 
         PortableServer::ObjectId_var oid;
 
         std::string localUri;
 	public:
-	    /**
-	     * Create a channel element for remote data exchange.
-	     * @param transport The type specific object that will be used to marshal the data.
-	     * @param poa The POA that manages the underlying CRemoteChannelElement_i.
-	     */
-	    RemoteChannelElement(CorbaTypeTransporter const& transport, DataFlowInterface* sender, PortableServer::POA_ptr poa, bool is_pull, bool is_signalling)
-        : CRemoteChannelElement_i(transport, poa)
-        , valid(true), pull(is_pull), signalling(is_signalling)
-        , msender(sender)
+            /**
+             * Create a channel element for remote data exchange.
+             * @param transport The type specific object that will be used to marshal the data.
+             * @param poa The POA that manages the underlying CRemoteChannelElement_i.
+             */
+            RemoteChannelElement(std::string const& dispatcherName, CorbaTypeTransporter const& transport, PortableServer::POA_ptr poa, bool is_pull, bool is_signalling)
+                    : CRemoteChannelElement_i(transport, poa)
+                    , valid(true), pull(is_pull), signalling(is_signalling)
+                    , mdispatcher(CorbaDispatcher::Acquire(dispatcherName))
             {
                 // Big note about cleanup: The RTT will dispose this object through
-	            // the ChannelElement<T> refcounting. So we only need to inform the
+                // the ChannelElement<T> refcounting. So we only need to inform the
                 // POA that our object is dead in disconnect().
                 // CORBA refcount-managed servants must start with a refcount of
                 // 1
                 this->ref();
                 oid = mpoa->activate_object(this);
-                // Force creation of dispatcher.
-                CorbaDispatcher::Instance(msender);
+
+                localUri = ApplicationServer::orb->object_to_string(_this());
+            }
+            /**
+             * Create a channel element for remote data exchange.
+             * @param transport The type specific object that will be used to marshal the data.
+             * @param poa The POA that manages the underlying CRemoteChannelElement_i.
+             */
+            RemoteChannelElement(CorbaTypeTransporter const& transport, PortableServer::POA_ptr poa, bool is_pull)
+                : CRemoteChannelElement_i(transport, poa)
+                , valid(true), pull(is_pull), signalling(false)
+                , mdispatcher(0)
+            {
+                // Big note about cleanup: The RTT will dispose this object through
+                // the ChannelElement<T> refcounting. So we only need to inform the
+                // POA that our object is dead in disconnect().
+                // CORBA refcount-managed servants must start with a refcount of
+                // 1
+                this->ref();
+                oid = mpoa->activate_object(this);
 
                 localUri = ApplicationServer::orb->object_to_string(_this());
             }
 
             ~RemoteChannelElement()
             {
+                if (mdispatcher) {
+                    CorbaDispatcher::Deref(mdispatcher->getName());
+                }
             }
 
             /** Increase the reference count, called from the CORBA side */
@@ -138,7 +160,7 @@ namespace RTT {
                 // that wrote the data, so we must decouple here to keep hard-RT happy.
                 // the dispatch thread must read the data and send it over by calling transferSample().
                 if (!pull || signalling) {
-                    CorbaDispatcher::Instance(msender)->dispatchChannel( this );
+                    mdispatcher->dispatchChannel( this );
                 }
 
                 return valid;
