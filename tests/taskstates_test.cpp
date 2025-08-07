@@ -832,9 +832,7 @@ BOOST_AUTO_TEST_CASE(test_calling_stop_concurrently_with_updateHook_calling_exce
     task.start();
     BOOST_REQUIRE(!task.inException());
     task.trigger();
-    while(!task.inUpdateHook) {
-        usleep(1000);
-    }
+    while(!task.inUpdateHook) { usleep(1000); }
     BOOST_REQUIRE(!task.inException());
     task.stop();
     BOOST_REQUIRE_EQUAL(1, task.stopHookCalled);
@@ -873,5 +871,228 @@ BOOST_AUTO_TEST_CASE(test_calling_stop_concurrently_with_updateHook_calling_stop
     BOOST_REQUIRE_EQUAL(TaskCore::Stopped, task.getTargetState());
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+/** Base class for the exception transition tests */
+struct exception_hooks_sequence_tests :
+    public RTT::TaskContext
+{
+    int sequence, stopHookSequence, cleanupHookSequence, exceptionHookSequence;
+    exception_hooks_sequence_tests()
+        : RTT::TaskContext("test", RTT::TaskContext::PreOperational)
+        , sequence(0)
+        , stopHookSequence(0)
+        , cleanupHookSequence(0)
+        , exceptionHookSequence(0) {}
 
+    void stopHook() { stopHookSequence = ++sequence; }
+    void cleanupHook() { cleanupHookSequence = ++sequence; }
+    void exceptionHook() { exceptionHookSequence = ++sequence; }
+};
+
+struct call_exception_within_stopHook : exception_hooks_sequence_tests
+{
+    void stopHook()
+    {
+        exception();
+        stopHookSequence = ++sequence;
+    }
+};
+BOOST_AUTO_TEST_CASE(test_calling_exception_within_stopHook_during_a_normal_stop_transition_calls_cleanupHook_and_exceptionHook_after_stopHook_returned) {
+    call_exception_within_stopHook task;
+    task.configure();
+    task.start();
+    task.stop();
+    BOOST_REQUIRE_EQUAL(1, task.stopHookSequence);
+    BOOST_REQUIRE_EQUAL(2, task.cleanupHookSequence);
+    BOOST_REQUIRE_EQUAL(3, task.exceptionHookSequence);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+
+struct call_exception_in_updateHook_and_stopHook : exception_hooks_sequence_tests
+{
+    void updateHook()
+    {
+        exception();
+    }
+};
+BOOST_AUTO_TEST_CASE(test_calling_exception_within_stopHook_during_an_exception_transition_initiated_in_RUNNING_calls_cleanupHook_and_exceptionHook_after_stopHook_returned) {
+    call_exception_in_updateHook_and_stopHook task;
+    task.configure();
+    task.start();
+    task.trigger();
+    while(!task.inException()) { usleep(1000); }
+    BOOST_REQUIRE_EQUAL(1, task.stopHookSequence);
+    BOOST_REQUIRE_EQUAL(2, task.cleanupHookSequence);
+    BOOST_REQUIRE_EQUAL(3, task.exceptionHookSequence);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+
+struct call_exception_in_cleanupHook : exception_hooks_sequence_tests
+{
+    void cleanupHook()
+    {
+        exception();
+        cleanupHookSequence = ++sequence;
+    }
+};
+BOOST_AUTO_TEST_CASE(test_calling_exception_within_cleanupHook_during_a_normal_cleanup_transition_calls_exceptionHook_after_cleanupHook_returned) {
+    call_exception_in_cleanupHook task;
+    task.configure();
+    task.start();
+    task.stop();
+    BOOST_REQUIRE(!task.cleanup());
+
+    BOOST_REQUIRE_EQUAL(1, task.stopHookSequence);
+    BOOST_REQUIRE_EQUAL(2, task.cleanupHookSequence);
+    BOOST_REQUIRE_EQUAL(3, task.exceptionHookSequence);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+struct call_exception_in_updateHook_and_cleanupHook : exception_hooks_sequence_tests
+{
+    void updateHook() { exception(); }
+    void cleanupHook()
+    {
+        exception();
+        cleanupHookSequence = ++sequence;
+    }
+};
+BOOST_AUTO_TEST_CASE(test_calling_exception_within_cleanupHook_during_an_exception_transition_initiated_in_RUNNING_calls_exceptionHook_after_cleanupHook_returned) {
+    call_exception_in_updateHook_and_cleanupHook task;
+    task.configure();
+    task.start();
+    task.trigger();
+    while(!task.inException()) { usleep(1000); }
+
+    BOOST_REQUIRE_EQUAL(1, task.stopHookSequence);
+    BOOST_REQUIRE_EQUAL(2, task.cleanupHookSequence);
+    BOOST_REQUIRE_EQUAL(3, task.exceptionHookSequence);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+struct call_exception_in_stopHook_and_cleanupHook : exception_hooks_sequence_tests
+{
+    void stopHook()
+    {
+        exception();
+        stopHookSequence = ++sequence;
+    }
+    void cleanupHook()
+    {
+        exception();
+        cleanupHookSequence = ++sequence;
+    }
+};
+BOOST_AUTO_TEST_CASE(test_calling_exception_within_cleanupHook_during_an_exception_transition_initiated_in_stopHook_calls_exceptionHook_after_cleanupHook_returned) {
+    call_exception_in_stopHook_and_cleanupHook task;
+    task.configure();
+    task.start();
+    task.stop();
+
+    BOOST_REQUIRE_EQUAL(1, task.stopHookSequence);
+    BOOST_REQUIRE_EQUAL(2, task.cleanupHookSequence);
+    BOOST_REQUIRE_EQUAL(3, task.exceptionHookSequence);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+
+struct calling_exception_within_exceptionHook_does_nothing :
+    exception_hooks_sequence_tests
+{
+    void updateHook() { exception(); }
+    void exceptionHook()
+    {
+        exception();
+        exceptionHookSequence = ++sequence;
+    }
+};
+
+BOOST_AUTO_TEST_CASE(test_calling_exception_within_exceptionHook_does_nothing) {
+    calling_exception_within_exceptionHook_does_nothing task;
+    task.configure();
+    task.start();
+    task.trigger();
+    while (!task.inException()) { usleep(10000); }
+
+    BOOST_REQUIRE_EQUAL(1, task.stopHookSequence);
+    BOOST_REQUIRE_EQUAL(2, task.cleanupHookSequence);
+    BOOST_REQUIRE_EQUAL(3, task.exceptionHookSequence);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+
+struct calling_exception_twice_in_updateHook_calls_transition_hooks_once_only :
+    exception_hooks_sequence_tests
+{
+    void updateHook()
+    {
+        exception();
+        exception();
+    }
+};
+
+BOOST_AUTO_TEST_CASE(test_calling_exception_twice_in_updateHook_calls_transition_hooks_once_only) {
+    calling_exception_twice_in_updateHook_calls_transition_hooks_once_only task;
+    task.configure();
+    task.start();
+    task.trigger();
+    while (!task.inException()) { usleep(10000); }
+
+    BOOST_REQUIRE_EQUAL(1, task.stopHookSequence);
+    BOOST_REQUIRE_EQUAL(2, task.cleanupHookSequence);
+    BOOST_REQUIRE_EQUAL(3, task.exceptionHookSequence);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+
+struct calling_exception_twice_in_stopHook_during_a_normal_stop_transition_calls_transition_hooks_once_only :
+    exception_hooks_sequence_tests
+{
+    void stopHook()
+    {
+        stopHookSequence = ++sequence;
+        exception();
+        exception();
+    }
+};
+
+BOOST_AUTO_TEST_CASE(test_calling_exception_twice_in_stopHook_during_a_normal_stop_transition_calls_transition_hooks_once_only) {
+    calling_exception_twice_in_stopHook_during_a_normal_stop_transition_calls_transition_hooks_once_only task;
+    task.configure();
+    task.start();
+    task.stop();
+
+    BOOST_REQUIRE_EQUAL(1, task.stopHookSequence);
+    BOOST_REQUIRE_EQUAL(2, task.cleanupHookSequence);
+    BOOST_REQUIRE_EQUAL(3, task.exceptionHookSequence);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+
+struct calling_exception_twice_in_cleanupHook_during_a_normal_cleanup_transition_calls_transition_hooks_once_only :
+    exception_hooks_sequence_tests
+{
+    void cleanupHook()
+    {
+        exception();
+        exception();
+        cleanupHookSequence = ++sequence;
+    }
+};
+
+BOOST_AUTO_TEST_CASE(test_calling_exception_twice_in_cleanupHook_during_a_normal_cleanup_transition_calls_transition_hooks_once_only) {
+    calling_exception_twice_in_cleanupHook_during_a_normal_cleanup_transition_calls_transition_hooks_once_only task;
+    task.configure();
+    task.start();
+    task.stop();
+    task.cleanup();
+
+    BOOST_REQUIRE_EQUAL(1, task.stopHookSequence);
+    BOOST_REQUIRE_EQUAL(2, task.cleanupHookSequence);
+    BOOST_REQUIRE_EQUAL(3, task.exceptionHookSequence);
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTaskState());
+    BOOST_REQUIRE_EQUAL(TaskCore::Exception, task.getTargetState());
+}
+
+BOOST_AUTO_TEST_SUITE_END()

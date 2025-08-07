@@ -206,6 +206,26 @@ namespace RTT
         virtual bool isActive() const;
 
         /**
+         * Inspect if the component is performing the configuration transition.
+         */
+        virtual bool inConfigureTransition() const;
+
+        /**
+         * Inspect if the component is performing the start transition.
+         */
+        virtual bool inStartTransition() const;
+
+        /**
+         * Inspect if the component is performing the start transition.
+         */
+        virtual bool inStopTransition() const;
+
+        /**
+         * Inspect if the component is performing the start transition.
+         */
+        virtual bool inCleanupTransition() const;
+
+        /**
          * Inspect if the component is in the Running or RunTimeError state.
          * As RunTimeError is a substate of Running, this method
          * also returns true when the component is in one of these states.
@@ -498,6 +518,40 @@ namespace RTT
          * Number of cycles that were caused by Trigger triggers.
          */
         unsigned int mTriggerCounter;
+
+        /** Actual implementation of the configure() transition
+         *
+         * Separation is needed to ease debugging. configure() conditionally
+         * handles exceptions, which confuses debugging.
+         *
+         */
+        bool performConfigureTransition();
+
+        /** Actual implementation of the cleanup() transition
+         *
+         * Separation is needed to ease debugging. cleanup() conditionally
+         * handles exceptions, which confuses debugging.
+         *
+         */
+        bool performCleanupTransition();
+
+        /** Actual implementation of the stop() transition
+         *
+         * Separation is needed to ease debugging. exception() conditionally
+         * handles exceptions, which confuses debugging.
+         *
+         */
+        bool performStopTransition();
+
+        /** Actual implementation of the exception() transition
+         *
+         * Separation is needed to ease debugging. exception() conditionally
+         * handles exceptions, which confuses debugging.
+         *
+         * In addition, it allows re-using in stop() and cleanup()
+         *
+         */
+        void performExceptionTransition(TaskState state);
     };
 }}
 
