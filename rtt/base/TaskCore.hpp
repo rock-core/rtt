@@ -456,12 +456,29 @@ namespace RTT
         virtual void fatal();
 
         /**
-         * Call this method to indicate a
-         * run-time exception happend. First the TaskState is set to Exception.
-         * Next, if the taskstate was >= Running, stopHook() is called.
-         * Next, if the taskstate was >= Stopped, cleanupHook() is called.
-         * Finally, exceptionHook() is called.
-         * If any exception happens in exceptionHook(), fatal() is called.
+         * Call this method to indicate a run-time exception happened.
+         * 
+         * Calling this eventually transitions the task to exception(). When it
+         * happens depends on where the call was made:
+         *
+         * When in configureHook, startHook or updateHook, the call immediately
+         * calls the relevant cleanup hooks, that is:
+         * - configureHook: exceptionHook is called
+         * - startHook: cleanupHook and then exceptionHook are called
+         * - updateHook: stopHook, cleanupHook and then exceptionHook are called
+         *
+         * After the successful execution of these, the task is transitioned to
+         * Exception. If a C++ exception is thrown during this process, the task
+         * immediately transitions to Fatal
+         *
+         * When in stopHook, cleanupHook and exceptionHook will be called once
+         * stopHook returned. The task's state is then Exception. If a C++
+         * exception is thrown during this process, the task immediately
+         * transitions to Fatal
+         *
+         * When in cleanupHook, exceptionHook is called once stopHook returned.
+         * The task's state is then Exception. If a C++ exception is thrown
+         * during this process, the task immediately transitions to Fatal
          */
         virtual void exception();
 
