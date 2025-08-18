@@ -99,56 +99,74 @@ namespace RTT {
     }
 
     bool TaskCore::configure() {
-        if ( mTaskState == Stopped || mTaskState == PreOperational) {
-            TRY(
-                setTargetState(Stopped);
-                bool successful = configureHook();
-                if (successful) {
-                    if (mTaskState != Stopped && (mTaskState == mTargetState)) {
-                        log(Error) << "in configure(): state has been changed inside the configureHook" << endlog();
-                        log(Error) << "  but configureHook returned true. Bailing out." << endlog();
-                        exception();
-                        return false;
-                    }
-                    else {
-                        setTaskState(Stopped);
-                        return true;
-                    }
-                } else {
-                    setTaskState(PreOperational);
-                    setTargetState(PreOperational);
-                    return false;
-                }
-             ) CATCH(std::exception const& e,
-                log(Error) << "in configure(): switching to exception state because of unhandled exception" << endlog();
-                log(Error) << "  " << e.what() << endlog();
-                exception();
-             ) CATCH_ALL(
-                log(Error) << "in configure(): switching to exception state because of unhandled exception" << endlog();
-                exception();
-             )
+        if ( mTaskState != Stopped && mTaskState != PreOperational) {
+            return false;
         }
-        return false; // no configure when running.
+
+        TRY(
+            return performConfigureTransition();
+        ) CATCH(std::exception const& e,
+            log(Error) << "in configure(): switching to exception state because of unhandled exception" << endlog();
+            log(Error) << "  " << e.what() << endlog();
+            exception();
+        ) CATCH_ALL(
+            log(Error) << "in configure(): switching to exception state because of unhandled exception" << endlog();
+            exception();
+        )
+        return false;
+    }
+
+    bool TaskCore::performConfigureTransition() {
+        setTargetState(Stopped);
+        if (!configureHook()) {
+            if (mTargetState == Stopped) {
+                setTargetState(PreOperational);
+                setTaskState(PreOperational);
+            }
+            return false;
+        }
+
+        if (mTargetState == Stopped) {
+            setTaskState(Stopped);
+            return true;
+        }
+
+        log(Error) << "in configure(): state has been changed inside the configureHook" << endlog();
+        log(Error) << "  but configureHook returned true. Bailing out." << endlog();
+        exception();
+        return false;
     }
 
     bool TaskCore::cleanup() {
-        if ( mTaskState == Stopped ) {
-            TRY(
-                setTargetState(PreOperational);
-                cleanupHook();
-                if (mTaskState == Stopped)
-                    setTaskState(PreOperational);
-                return true;
-             ) CATCH(std::exception const& e,
-                log(Error) << "in cleanup(): switching to exception state because of unhandled exception" << endlog();
-                log(Error) << "  " << e.what() << endlog();
-                exception();
-             ) CATCH_ALL (
-                log(Error) << "in cleanup(): switching to exception state because of unhandled exception" << endlog();
-                exception();
-             )
+        if ( mTaskState != Stopped ) {
+            return false;
         }
+
+        TRY(
+            return performCleanupTransition();
+        ) CATCH(std::exception const& e,
+           log(Error) << "in cleanup(): switching to fatal state because of unhandled exception" << endlog();
+           log(Error) << "  " << e.what() << endlog();
+           fatal();
+        ) CATCH_ALL (
+           log(Error) << "in cleanup(): switching to fatal state because of unhandled exception" << endlog();
+           fatal();
+        )
         return false; // no cleanup when running or not configured.
+    }
+
+    bool TaskCore::performCleanupTransition() {
+        setTargetState(PreOperational);
+        cleanupHook();
+        if (mTargetState == PreOperational) {
+            setTaskState(PreOperational);
+            return true;
+        }
+
+        if (mTargetState == Exception) {
+            performExceptionTransition(PreOperational);
+        }
+        return false;
     }
 
     void TaskCore::fatal() {
@@ -166,25 +184,48 @@ namespace RTT {
     }
 
     void TaskCore::exception() {
-        //log(Error) <<"Exception happend in TaskCore."<<endlog();
-        TaskState copy = mTaskState;
+        if (mTargetState == TaskCore::Exception) {
+            // Already transitioned or transitioning to exception, do nothing
+            return;
+        }
+
+        if (mTargetState != mTaskState) {
+            // Already in transition. Set the target state but we assume the transition
+            // method will actually call the hooks
+            if (inStopTransition() || inCleanupTransition()) {
+                // stop() and cleanup() will take care of doing the exception transition
+                // after the stopHook call
+                setTargetState(Exception);
+                return;
+            }
+        }
+
+        TaskState state = mTaskState;
         setTargetState(Exception);
         TRY (
-            if ( copy >= Running ) {
-                stopHook();
-            }
-            if ( copy >= Stopped && mInitialState == PreOperational ) {
-                cleanupHook();
-            }
-            exceptionHook();
-            setTaskState(Exception);
+            performExceptionTransition(state);
         ) CATCH(std::exception const& e,
-            log(RTT::Error) << "stopHook(), cleanupHook() and/or exceptionHook() raised " << e.what() << ", going into Fatal" << endlog();
+            log(RTT::Error)
+                << "stopHook(), cleanupHook() and/or exceptionHook() raised "
+                << e.what() << ", going into Fatal" << endlog();
             fatal();
         ) CATCH_ALL (
-            log(Error) << "stopHook(), cleanupHook() and/or exceptionHook() raised an exception, going into Fatal" << endlog();
+            log(Error)
+                << "stopHook(), cleanupHook() and/or exceptionHook() raised "
+                << "an exception, going into Fatal" << endlog();
             fatal();
         )
+    }
+
+    void TaskCore::performExceptionTransition(TaskState state) {
+        if (state >= Running) {
+            stopHook();
+        }
+        if (state >= Stopped && mInitialState == PreOperational) {
+            cleanupHook();
+        }
+        exceptionHook();
+        setTaskState(Exception);
     }
 
     bool TaskCore::recover() {
@@ -234,34 +275,63 @@ namespace RTT {
     }
 
     bool TaskCore::stop() {
-        TaskState origTarget = mTaskState;
-        if ( mTaskState >= Running ) {
-            TRY(
-                setTargetState(Stopped);
-                if ( engine()->stopTask(this) ) {
-                    // If updateHook was running, it might have changed the
-                    // state itself (e.g. stopped or exception). Make sure that
-                    // stopping is still relevant
-                    if ( mTaskState >= Running ) {
-                        setTargetState(Stopped);
-                        stopHook();
-                        setTaskState(Stopped);
-                        return true;
-                    }
-                    else {
-                        return false;
-                    }
-                } else if (mTargetState == Stopped) {
-                    setTargetState(origTarget);
-                }
-            ) CATCH(std::exception const& e,
-                log(Error) << "in stop(): switching to exception state because of unhandled exception" << endlog();
-                log(Error) << "  " << e.what() << endlog();
-                exception();
-            ) CATCH_ALL (
-                log(Error) << "in stop(): switching to exception state because of unhandled exception" << endlog();
-                exception();
-            )
+        if ( mTaskState < Running ) {
+            // Not running, invalid transition
+            return false;
+        }
+
+        TRY(
+            if (performStopTransition()) {
+                return true;
+            }
+        ) CATCH(std::exception const& e,
+            log(Error) << "in stop(): switching to fatal state because of unhandled exception" << endlog();
+            log(Error) << "  " << e.what() << endlog();
+            fatal();
+        ) CATCH_ALL (
+            log(Error) << "in stop(): switching to fatal state because of unhandled exception" << endlog();
+            fatal();
+        )
+
+        if (mTargetState != Exception) {
+            return false;
+        }
+
+        TRY(
+            performExceptionTransition(Stopped);
+            return false;
+        ) CATCH(std::exception const& e,
+            log(Error) << "in stop(): switching to fatal state because of unhandled exception during exception transition" << endlog();
+            log(Error) << "  " << e.what() << endlog();
+            fatal();
+        ) CATCH_ALL (
+            log(Error) << "in stop(): switching to fatal state because of unhandled exception during exception transition" << endlog();
+            fatal();
+        )
+
+        return false;
+    }
+
+    bool TaskCore::performStopTransition() {
+        TaskState origState = mTaskState;
+
+        setTargetState(Stopped);
+        if ( !engine()->stopTask(this) ) {
+            setTargetState(origState);
+            return false;
+        }
+
+        // If updateHook was running, it might have changed the
+        // state itself (e.g. stopped or exception). Make sure that
+        // stopping is still relevant
+        if ( mTaskState < Running ) {
+            return true;
+        }
+
+        stopHook();
+        if (mTargetState == Stopped) {
+            setTaskState(Stopped);
+            return true;
         }
         return false;
     }
@@ -284,6 +354,23 @@ namespace RTT {
 
     bool TaskCore::inFatalError() const {
         return mTaskState == FatalError;
+    }
+
+    bool TaskCore::inConfigureTransition() const {
+        return mTaskState == PreOperational && mTargetState == Stopped;
+    }
+
+    bool TaskCore::inStartTransition() const {
+        return mTaskState == Stopped && mTargetState == Running;
+    }
+
+    bool TaskCore::inStopTransition() const {
+        return (mTaskState == Running || mTaskState == RunTimeError) &&
+               mTargetState == Stopped;
+    }
+
+    bool TaskCore::inCleanupTransition() const {
+        return mTaskState == Stopped && mTargetState == PreOperational;
     }
 
     bool TaskCore::inException() const {

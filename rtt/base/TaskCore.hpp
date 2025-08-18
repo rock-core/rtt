@@ -206,6 +206,26 @@ namespace RTT
         virtual bool isActive() const;
 
         /**
+         * Inspect if the component is performing the configuration transition.
+         */
+        virtual bool inConfigureTransition() const;
+
+        /**
+         * Inspect if the component is performing the start transition.
+         */
+        virtual bool inStartTransition() const;
+
+        /**
+         * Inspect if the component is performing the start transition.
+         */
+        virtual bool inStopTransition() const;
+
+        /**
+         * Inspect if the component is performing the start transition.
+         */
+        virtual bool inCleanupTransition() const;
+
+        /**
          * Inspect if the component is in the Running or RunTimeError state.
          * As RunTimeError is a substate of Running, this method
          * also returns true when the component is in one of these states.
@@ -436,12 +456,29 @@ namespace RTT
         virtual void fatal();
 
         /**
-         * Call this method to indicate a
-         * run-time exception happend. First the TaskState is set to Exception.
-         * Next, if the taskstate was >= Running, stopHook() is called.
-         * Next, if the taskstate was >= Stopped, cleanupHook() is called.
-         * Finally, exceptionHook() is called.
-         * If any exception happens in exceptionHook(), fatal() is called.
+         * Call this method to indicate a run-time exception happened.
+         * 
+         * Calling this eventually transitions the task to exception(). When it
+         * happens depends on where the call was made:
+         *
+         * When in configureHook, startHook or updateHook, the call immediately
+         * calls the relevant cleanup hooks, that is:
+         * - configureHook: exceptionHook is called
+         * - startHook: cleanupHook and then exceptionHook are called
+         * - updateHook: stopHook, cleanupHook and then exceptionHook are called
+         *
+         * After the successful execution of these, the task is transitioned to
+         * Exception. If a C++ exception is thrown during this process, the task
+         * immediately transitions to Fatal
+         *
+         * When in stopHook, cleanupHook and exceptionHook will be called once
+         * stopHook returned. The task's state is then Exception. If a C++
+         * exception is thrown during this process, the task immediately
+         * transitions to Fatal
+         *
+         * When in cleanupHook, exceptionHook is called once stopHook returned.
+         * The task's state is then Exception. If a C++ exception is thrown
+         * during this process, the task immediately transitions to Fatal
          */
         virtual void exception();
 
@@ -498,6 +535,40 @@ namespace RTT
          * Number of cycles that were caused by Trigger triggers.
          */
         unsigned int mTriggerCounter;
+
+        /** Actual implementation of the configure() transition
+         *
+         * Separation is needed to ease debugging. configure() conditionally
+         * handles exceptions, which confuses debugging.
+         *
+         */
+        bool performConfigureTransition();
+
+        /** Actual implementation of the cleanup() transition
+         *
+         * Separation is needed to ease debugging. cleanup() conditionally
+         * handles exceptions, which confuses debugging.
+         *
+         */
+        bool performCleanupTransition();
+
+        /** Actual implementation of the stop() transition
+         *
+         * Separation is needed to ease debugging. exception() conditionally
+         * handles exceptions, which confuses debugging.
+         *
+         */
+        bool performStopTransition();
+
+        /** Actual implementation of the exception() transition
+         *
+         * Separation is needed to ease debugging. exception() conditionally
+         * handles exceptions, which confuses debugging.
+         *
+         * In addition, it allows re-using in stop() and cleanup()
+         *
+         */
+        void performExceptionTransition(TaskState state);
     };
 }}
 
