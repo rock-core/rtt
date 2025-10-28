@@ -242,6 +242,13 @@ namespace RTT
 
             virtual void setWaitPeriodPolicy(int p);
 
+            /** Returns the maximum wait time between triggers in aperiodic mode
+             *
+             * @return 0 if there is no timeout, or the wait time in nanoseconds
+             * @see setAperiodicTriggerTimeout
+             */
+            virtual NANO_TIME getAperiodicTriggerTimeout();
+
             /** Sets a maximum wait time between triggers in aperiodic mode
              *
              * This is *not* as precise as a periodic task. It is meant as a way

@@ -77,6 +77,10 @@ namespace RTT {
         return true;
     }
 
+    NANO_TIME SlaveActivity::getAperiodicTriggerTimeout() {
+        return 0;
+    }
+
     bool SlaveActivity::setAperiodicTriggerTimeout(NANO_TIME timeout) {
         return (timeout == 0);
     }

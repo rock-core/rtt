@@ -190,6 +190,10 @@ void FileDescriptorActivity::setTimeout_us(int timeout_us)
     }
 }
 
+NANO_TIME FileDescriptorActivity::getAperiodicTriggerTimeout() {
+    return static_cast<NANO_TIME>(getTimeout_us()) * 1000;
+}
+
 bool FileDescriptorActivity::setAperiodicTriggerTimeout(NANO_TIME timeout) {
     setTimeout_us(timeout / 1000);
     return true;

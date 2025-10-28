@@ -165,6 +165,10 @@ namespace RTT {
         return false;
     }
 
+    NANO_TIME PeriodicActivity::getAperiodicTriggerTimeout() {
+        return 0;
+    }
+
     bool PeriodicActivity::setAperiodicTriggerTimeout(NANO_TIME timeout) {
         return false;
     }

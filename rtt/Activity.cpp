@@ -143,6 +143,10 @@ namespace RTT
         return update_period;
     }
 
+    NANO_TIME Activity::getAperiodicTriggerTimeout() {
+        return Thread::getAperiodicTriggerTimeout();
+    }
+
     bool Activity::setAperiodicTriggerTimeout(NANO_TIME timeout) {
         if (timeout < 0.0)
             return false;

@@ -669,6 +669,11 @@ namespace RTT {
             rtos_task_set_wait_period_policy(&rtos_task, p);
         }
 
+        NANO_TIME Thread::getAperiodicTriggerTimeout()
+        {
+            return aperiodicTriggerTimeout;
+        }
+
         bool Thread::setAperiodicTriggerTimeout(NANO_TIME timeout)
         {
             aperiodicTriggerTimeout = timeout;
