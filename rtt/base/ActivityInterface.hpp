@@ -162,6 +162,14 @@ namespace RTT
         virtual bool setPeriod(Seconds s)  = 0;
 
         /**
+         * Return the currently configured trigger timeout for aperiodic activities
+         *
+         * @return 0 if there is no trigger, or the trigger time in nanoseconds
+         * @see setAperiodicTriggerTimeout
+         */
+        virtual NANO_TIME getAperiodicTriggerTimeout()  = 0;
+
+        /**
          * Set a trigger timeout for aperiodic activities.
          *
          * When set, an aperiodic activity will be triggered after this long.

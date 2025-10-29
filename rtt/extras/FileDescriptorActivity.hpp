@@ -265,6 +265,11 @@ namespace RTT { namespace extras {
         /** Same as setTimeout, from the common Activity interface
          *
          */
+        NANO_TIME getAperiodicTriggerTimeout() override;
+
+        /** Same as setTimeout, from the common Activity interface
+         *
+         */
         bool setAperiodicTriggerTimeout(NANO_TIME timeout) override;
 
         /** Sets the timeout, in microseconds, for waiting on the IO. Set to 0
