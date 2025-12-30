@@ -510,7 +510,7 @@ bool PluginLoader::loadLibrary( std::string const& name )
     }
 
     // bail out if absolute path
-    if ( arg.is_complete() )
+    if ( arg.is_absolute() )
         return false;
 
     // try relative match:
