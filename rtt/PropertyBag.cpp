@@ -212,7 +212,7 @@ namespace RTT
 
     PropertyBase* PropertyBag::find(const std::string& name) const
     {
-        const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind2nd(FindProp(), name ) ) );
+        const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind(FindProp(), placeholders::_1, name ) ) );
         if ( i != mproperties.end() )
             return ( *i );
         return 0;
@@ -220,7 +220,7 @@ namespace RTT
 
     base::PropertyBase* PropertyBag::getProperty(const std::string& name) const
     {
-        const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind2nd(FindProp(), name ) ) );
+        const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind(FindProp(), std::placeholders::_1, name ) ) );
         if ( i != mproperties.end() )
             return *i;
         return 0;

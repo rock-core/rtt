@@ -304,7 +304,7 @@ namespace RTT {
         //assert( build not used by other than NOP )
         assert( dynamic_cast<CommandNOP*>( this->getCommand(build) ));
         this->setCommand( icom );
-        
+
         GraphVertexCopier gvc( fn->getGraph(), *graph, replacementdss );
         GraphEdgeCopier gec( fn->getGraph(), *graph, replacementdss );
 
@@ -349,12 +349,14 @@ namespace RTT {
 
         Vertex funcStart=*
                          find_if(v1, v2,
-                                 bind2nd( finder<boost::property_map<Graph, vertex_exec_t>::type>() ,
-                                          std::make_pair( vmap, int(VertexNode::func_start_node)) ) );
+                                 bind( finder<boost::property_map<Graph, vertex_exec_t>::type>() ,
+                                      std::placeholders::_1,
+                                       std::make_pair( vmap, int(VertexNode::func_start_node)) ) );
         Vertex funcExit=*
                         find_if(v1, v2,
-                                bind2nd( finder<boost::property_map<Graph, vertex_exec_t>::type>() ,
-                                         std::make_pair( vmap, int(VertexNode::func_exit_node)) ) );
+                                bind( finder<boost::property_map<Graph, vertex_exec_t>::type>() ,
+                                      std::placeholders::_1,
+                                      std::make_pair( vmap, int(VertexNode::func_exit_node)) ) );
 
         // reset their special meanings.
         vmap[funcStart] = VertexNode::normal_node;
