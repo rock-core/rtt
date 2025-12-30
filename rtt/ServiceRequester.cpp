@@ -41,9 +41,11 @@
 #include "internal/mystd.hpp"
 #include "Logger.hpp"
 #include "TaskContext.hpp"
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 #include <utility>
+
+using namespace boost::placeholders;
 
 namespace RTT
 {

@@ -44,7 +44,7 @@
 #include <string>
 #include <algorithm>
 #include <functional>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/mem_fn.hpp>
 
 #include "internal/DataSource.hpp"
@@ -59,6 +59,8 @@
 #elif defined(ORO_ACT_DEFAULT_ACTIVITY)
 #include "Activity.hpp"
 #endif
+
+using namespace boost::placeholders;
 
 namespace RTT
 {

@@ -47,8 +47,10 @@
 #include "internal/CatchConfig.hpp"
 #include "extras/SlaveActivity.hpp"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <algorithm>
+
+using namespace boost::placeholders;
 
 #define ORONUM_EE_MQUEUE_SIZE 100
 

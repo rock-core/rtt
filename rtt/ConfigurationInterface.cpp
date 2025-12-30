@@ -40,8 +40,9 @@
 #include "ConfigurationInterface.hpp"
 #include "internal/mystd.hpp"
 #include <functional>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
+using namespace boost::placeholders;
 namespace RTT {
     using namespace detail;
     using namespace std;
@@ -99,6 +100,8 @@ namespace RTT {
 
   bool ConfigurationInterface::removeValue( const std::string& name )
   {
+    using namespace boost::placeholders;
+
     map_t::iterator i = find_if( values.begin(), values.end(), boost::bind(equal_to<std::string>(),name, boost::bind(&AttributeBase::getName, _1)) );
     if ( i != values.end() ) {
         delete (*i);
@@ -110,6 +113,8 @@ namespace RTT {
 
   AttributeBase* ConfigurationInterface::getValue( const std::string& name ) const
   {
+    using namespace boost::placeholders;
+
     map_t::const_iterator i = find_if( values.begin(), values.end(), boost::bind(equal_to<std::string>(),name, boost::bind(&AttributeBase::getName, _1)) );
     if ( i == values.end() ) return 0;
     else return *i;
@@ -117,6 +122,8 @@ namespace RTT {
 
   bool ConfigurationInterface::hasAttribute( const std::string& name ) const
   {
+    using namespace boost::placeholders;
+
     map_t::const_iterator i = find_if( values.begin(), values.end(), boost::bind(equal_to<std::string>(),name, boost::bind(&AttributeBase::getName, _1)) );
     return i != values.end();
   }
@@ -137,6 +144,8 @@ namespace RTT {
 
     std::vector<std::string> ConfigurationInterface::getAttributeNames() const
     {
+        using namespace boost::placeholders;
+
         std::vector<std::string> ret;
         std::transform( values.begin(), values.end(), back_inserter(ret), boost::bind(&AttributeBase::getName, _1) );
         return ret;

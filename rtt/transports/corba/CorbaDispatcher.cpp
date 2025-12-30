@@ -42,6 +42,8 @@
 using namespace RTT;
 using namespace RTT::corba;
 
+using namespace boost::placeholders;
+
 CorbaDispatcher::DispatchMap CorbaDispatcher::DispatchI;
 CorbaDispatcher::InstanceMap CorbaDispatcher::Instances;
 os::Mutex CorbaDispatcher::mlock;

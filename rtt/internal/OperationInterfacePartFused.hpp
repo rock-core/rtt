@@ -206,6 +206,8 @@ namespace RTT
 
 
             virtual Handle produceSignal( base::ActionInterface* func, const std::vector<base::DataSourceBase::shared_ptr>& args, ExecutionEngine* subscriber) const {
+                using namespace boost::placeholders;
+
                 base::OperationCallerInterface::shared_ptr impl = this->op->getOperationCaller();
                 if ( subscriber == impl->getMessageProcessor() )
                     subscriber = 0; // clear out to avoid dispatching
@@ -424,6 +426,8 @@ namespace RTT
                 }
 #ifdef ORO_SIGNALLING_OPERATIONS
                 virtual Handle produceSignal( base::ActionInterface* func, const std::vector<base::DataSourceBase::shared_ptr>& args, ExecutionEngine* subscriber) const {
+                    using namespace boost::placeholders;
+
                     if ( args.size() != arity() ) throw wrong_number_of_args_exception(arity(), args.size() );
                     base::OperationCallerInterface::shared_ptr impl = op->getOperationCaller();
                     if ( subscriber == impl->getMessageProcessor() )

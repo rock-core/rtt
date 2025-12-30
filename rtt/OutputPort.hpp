@@ -229,6 +229,8 @@ namespace RTT
          */
         void setDataSample(const T& sample)
         {
+            using namespace boost::placeholders;
+
             this->sample->Set(sample);
             has_initial_sample = true;
             has_last_written_value = false;
@@ -244,6 +246,8 @@ namespace RTT
          */
         void write(const T& sample)
         {
+            using namespace boost::placeholders;
+
             if (keeps_last_written_value || keeps_next_written_value)
             {
                 keeps_next_written_value = false;

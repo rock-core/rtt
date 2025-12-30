@@ -43,7 +43,7 @@
 #include "NA.hpp"
 
 #ifdef ORO_SIGNAL_USE_LIST_LOCK_FREE
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #else
 #include "../os/MutexLock.hpp"
 #endif
@@ -134,6 +134,8 @@ namespace RTT {
     public:
 		R emit(OROCOS_SIGNATURE_PARMS)
 		{
+            using namespace boost::placeholders;
+
 #ifdef ORO_SIGNAL_USE_LIST_LOCK_FREE
             this->emitting = true;
 
