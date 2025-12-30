@@ -198,12 +198,12 @@ namespace RTT
         // Detect already added parts of an interface, does not yet detect removed parts...
         if (CORBA::is_nil(mtask))
             return;
-        
+
         CService_var serv = mtask->getProvider("this");
         this->fetchServices(this->provides(), serv.in() );
 
         CServiceRequester_var srq = mtask->getRequester("this");
-        this->fetchRequesters(this->requires(), srq.in() );
+        this->fetchRequesters(this->serviceRequest(), srq.in() );
         log(Debug) << "All Done."<<endlog();
     }
 
@@ -226,7 +226,7 @@ namespace RTT
                 continue;
             CServiceRequester_var cobj = csrq->getRequest(rqlist[i]);
 
-            ServiceRequester::shared_ptr tobj = this->requires(std::string(rqlist[i]));
+            ServiceRequester::shared_ptr tobj = this->serviceRequest(std::string(rqlist[i]));
 
             // Recurse:
             this->fetchRequesters( tobj, cobj.in() );
@@ -508,7 +508,7 @@ namespace RTT
         return false;
     }
 
-    
+
     bool TaskContextProxy::activate() {
         try {
             if (! CORBA::is_nil(mtask) )
@@ -594,7 +594,7 @@ namespace RTT
         }
         return false;
     }
-    
+
     bool TaskContextProxy::inException() const
     {
         try {

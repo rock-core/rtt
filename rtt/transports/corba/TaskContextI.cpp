@@ -227,13 +227,13 @@ char * RTT_corba_CTaskContext_i::getDescription (
     const char * service_name)
 {
     std::string svc(service_name);
-    if ( mtask->requires()->requiresService(service_name) == false && svc != "this")
+    if ( mtask->serviceRequest()->requiresService(service_name) == false && svc != "this")
         return CServiceRequester::_nil();
     // Creates service requester for "this"
     if ( CORBA::is_nil( mRequest ) ) {
         log(Debug) << "Creating CServiceRequester for "<< mtask->getName()<<endlog();
         RTT_corba_CServiceRequester_i* mserv;
-        mRequest_i = mserv = new RTT_corba_CServiceRequester_i( mtask->requires(), mpoa );
+        mRequest_i = mserv = new RTT_corba_CServiceRequester_i( mtask->serviceRequest(), mpoa );
         mRequest = mserv->activate_this();
         //CServiceRequester_i::registerServant(mRequest, mtask->requires());
     }

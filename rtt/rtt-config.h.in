@@ -53,6 +53,7 @@
 
 #cmakedefine ORO_DISABLE_SCRIPTING
 #cmakedefine ORO_DISABLE_PORT_DATA_SCRIPTING
+#cmakedefine ORO_ONLY_CXX20_COMPATIBLE_REQUIRES_INTERFACE
 
 // if not defined, show an error
 #ifndef OROCOS_TARGET
