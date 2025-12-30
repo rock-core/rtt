@@ -50,6 +50,12 @@ namespace RTT
         {
             return "rtt-types";
         }
+
+#ifdef ORO_DISABLE_SCRIPTING
+        bool RealTimeTypekitPlugin::loadOperators() { return true; }
+        bool RealTimeTypekitPlugin::loadConstructors() { return true; }
+        bool RealTimeTypekitPlugin::loadGlobals() { return true; }
+#endif
     }
 
 }

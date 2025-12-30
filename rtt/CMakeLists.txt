@@ -102,6 +102,10 @@ OPTION(PLUGINS_ENABLE_MARSHALLING "Enable reading and writing Orocos Properties 
 ### Scripting
 OPTION(PLUGINS_ENABLE_SCRIPTING "Enable loading Orocos program scripts." ON)
 
+if (NOT PLUGINS_ENABLE_SCRIPTING)
+    set(ORO_DISABLE_SCRIPTING ON)
+endif()
+
 ### RTT-Typekit
 OPTION(PLUGINS_ENABLE_TYPEKIT "Enable default RTT typekit plugin." ON)
 

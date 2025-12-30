@@ -51,6 +51,7 @@
 
 #define RTT_HAS_STATE_CHANGE_HOOK
 
+#cmakedefine ORO_DISABLE_SCRIPTING
 #cmakedefine ORO_DISABLE_PORT_DATA_SCRIPTING
 
 // if not defined, show an error

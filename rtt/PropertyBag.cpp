@@ -201,7 +201,10 @@ namespace RTT
      *
      * A function object for finding a Property by name.
      */
-    struct FindProp : public std::binary_function<const base::PropertyBase*,const std::string, bool>
+    struct FindProp
+#ifndef ORO_DISABLE_SCRIPTING
+	: public std::binary_function<const base::PropertyBase*,const std::string, bool>
+#endif
     {
         bool operator()(const base::PropertyBase* b1, const std::string& b2) const { return b1->getName() == b2; }
     };

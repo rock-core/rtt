@@ -50,7 +50,9 @@
 namespace RTT
 {
     namespace types {
+#ifndef ORO_DISABLE_SCRIPTING
         void loadOrocosTypes(TypeInfoRepository::shared_ptr ti);
+#endif
         void loadStdTypes(TypeInfoRepository::shared_ptr ti);
     }
 
@@ -73,7 +75,9 @@ namespace RTT
         ti->addType( new TypeInfoName<void>("void"));
 
         // load the Orocos specific types:
+#ifndef ORO_DISABLE_SCRIPTING
         loadOrocosTypes( ti );
+#endif
         loadStdTypes( ti );
         return true;
     }

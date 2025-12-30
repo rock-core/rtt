@@ -3,8 +3,36 @@ IF (PLUGINS_ENABLE_TYPEKIT)
     ADD_DEFINITIONS( -DRTT_NO_STD_TYPES )
   endif (NOT PLUGINS_STD_TYPES_SUPPORT)
 
-  FILE( GLOB CPPS [^.]*.cpp )
-  FILE( GLOB HPPS [^.]*.hpp [^.]*.h [^.]*.inl)
+  set(CPPS
+     RealTimeTypekit.cpp
+     RealTimeTypekitStdTypes.cpp
+     RealTimeTypekitTypes.cpp
+  )
+
+
+  set(HPPS
+    BoolTypeInfo.hpp
+    RealTimeTypekit.hpp
+    RTStringTypeInfo.hpp
+    StdStringTypeInfo.hpp
+    StdTypeInfo.hpp
+    Types.hpp
+  )
+
+  if (PLUGINS_ENABLE_SCRIPTING)
+    list(APPEND CPPS
+       RealTimeTypekitConstructors.cpp
+       RealTimeTypekitGlobals.cpp
+       RealTimeTypekitOperators.cpp
+       RealTimeTypekitTypes2.cpp
+    )
+
+    list (APPEND HPPS
+      RTTTypes.hpp
+      ConnPolicyType.hpp
+      StdVectorTypeInfo.hpp
+    )
+  endif()
 
   GLOBAL_ADD_INCLUDE( rtt/typekit ${HPPS})
   GLOBAL_ADD_INCLUDE( rtt/typekit ${CMAKE_CURRENT_BINARY_DIR}/rtt-typekit-config.h)

@@ -38,8 +38,8 @@
 
 #include "rtt-typekit-config.h"
 
-#include "RealTimeTypekit.hpp"
 #ifndef RTT_NO_STD_TYPES
+#include "../types/SequenceTypeInfo.hpp"
 #include "StdStringTypeInfo.hpp"
 #endif
 #ifdef OS_RT_MALLOC
