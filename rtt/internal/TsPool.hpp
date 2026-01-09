@@ -102,7 +102,7 @@ namespace RTT
              * Creates a fixed size memory pool holding \a ssize
              * blocks of memory that can hold an object of class \a T.
              */
-            TsPool(unsigned int ssize, const T& sample = T()) :
+            TsPool(unsigned int ssize, const T& sample = T{}) :
                 pool_size(0), pool_capacity(ssize)
             {
                 pool = new Item[ssize];

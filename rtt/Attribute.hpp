@@ -73,7 +73,7 @@ namespace RTT
          */
         explicit Attribute(const std::string& name)
             : base::AttributeBase(name),
-              data( new internal::ValueDataSource<T>( T() ) )
+              data( new internal::ValueDataSource<T>( T{} ) )
         {}
 
         /**

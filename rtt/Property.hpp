@@ -375,7 +375,7 @@ namespace RTT
 
         virtual Property<T>* create() const
         {
-            return new Property<T>( _name, _description, T() );
+            return new Property<T>( _name, _description, T{} );
         }
 
         virtual Property<T>* create( const base::DataSourceBase::shared_ptr& datasource ) const
