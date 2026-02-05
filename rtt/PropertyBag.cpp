@@ -104,9 +104,7 @@ namespace RTT
 
     bool PropertyBag::addProperty(PropertyBase& p)
     {
-        if (&p == 0)
-            return false;
-        if ( ! p.ready() )
+        if (! p.ready())
             return false;
         mproperties.push_back(&p);
         return true;
