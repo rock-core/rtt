@@ -56,6 +56,7 @@ namespace RTT
         virtual std::string getName();
 
         virtual bool loadTypes();
+
         virtual bool loadOperators();
         virtual bool loadConstructors();
         virtual bool loadGlobals();

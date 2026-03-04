@@ -37,7 +37,9 @@
 
 
 #include "SignalBase.hpp"
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 #ifdef ORO_SIGNAL_USE_LIST_LOCK_FREE
 #else

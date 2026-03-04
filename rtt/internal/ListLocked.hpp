@@ -41,7 +41,7 @@
 #define ORO_LIST_LOCKED_HPP
 
 #include <boost/intrusive/list.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/bind/protect.hpp>
 #include <stack>
 #include <vector>

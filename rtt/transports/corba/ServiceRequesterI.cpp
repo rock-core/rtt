@@ -128,7 +128,7 @@ char * RTT_corba_CServiceRequester_i::getRequestName (
     if ( mrequests.find(svc) == mrequests.end() ) {
         log(Debug) << "Creating CServiceRequester for "<< service_name <<endlog();
         RTT_corba_CServiceRequester_i* mserv;
-        mserv = new RTT_corba_CServiceRequester_i( mservice->requires(service_name), mpoa );
+        mserv = new RTT_corba_CServiceRequester_i( mservice->serviceRequest(service_name), mpoa );
         CServiceRequester_ptr request = mserv->activate_this();
         mrequests[svc] = std::pair<RTT::corba::CServiceRequester_var, PortableServer::ServantBase_var>(request,mserv);
     }

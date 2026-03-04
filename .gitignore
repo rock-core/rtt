@@ -12,3 +12,6 @@ install
 class-dump.txt
 headers.txt
 *.sw?
+
+.cache
+.vscode/c_cpp_properties.json

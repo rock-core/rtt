@@ -44,12 +44,14 @@
  */
 
 #include "ConnectionManager.hpp"
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/scoped_ptr.hpp>
 #include "../base/PortInterface.hpp"
 #include "../os/MutexLock.hpp"
 #include "../base/InputPortInterface.hpp"
 #include <cassert>
+
+using namespace boost::placeholders;
 
 namespace RTT
 {

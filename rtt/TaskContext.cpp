@@ -44,7 +44,7 @@
 #include <string>
 #include <algorithm>
 #include <functional>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/mem_fn.hpp>
 
 #include "internal/DataSource.hpp"
@@ -59,6 +59,8 @@
 #elif defined(ORO_ACT_DEFAULT_ACTIVITY)
 #include "Activity.hpp"
 #endif
+
+using namespace boost::placeholders;
 
 namespace RTT
 {
@@ -189,14 +191,14 @@ namespace RTT
         const std::string& location = this->getName();
         Logger::In in( location.c_str()  );
 
-        vector<string> myreqs = this->requires()->getRequesterNames();
-        vector<string> peerreqs = peer->requires()->getRequesterNames();
+        vector<string> myreqs = this->serviceRequest()->getRequesterNames();
+        vector<string> peerreqs = peer->serviceRequest()->getRequesterNames();
 
-        this->requires()->connectTo( peer->provides() );
+        this->serviceRequest()->connectTo( peer->provides() );
         for (vector<string>::iterator it = myreqs.begin();
              it != myreqs.end();
              ++it) {
-            ServiceRequester::shared_ptr sr = this->requires(*it);
+            ServiceRequester::shared_ptr sr = this->serviceRequest(*it);
             if ( !sr->ready() ) {
                 if (peer->provides()->hasService( *it ))
                     success = sr->connectTo( peer->provides(*it) ) && success;
@@ -206,11 +208,11 @@ namespace RTT
             }
         }
 
-        peer->requires()->connectTo( this->provides() );
+        peer->serviceRequest()->connectTo( this->provides() );
         for (vector<string>::iterator it = peerreqs.begin();
                 it != peerreqs.end();
                 ++it) {
-            ServiceRequester::shared_ptr sr = peer->requires(*it);
+            ServiceRequester::shared_ptr sr = peer->serviceRequest(*it);
             if ( !sr->ready() ) {
                 if (this->provides()->hasService(*it))
                     success = sr->connectTo( this->provides(*it) ) && success;

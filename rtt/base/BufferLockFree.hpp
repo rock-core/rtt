@@ -81,13 +81,13 @@ namespace RTT
         mutable internal::TsPool<Item> mpool;
         const bool mcircular;
         RTT::os::AtomicInt droppedSamples;
-        
+
     public:
         /**
          * Create a lock-free buffer wich can store \a bufsize elements.
          * @param bufsize the capacity of the buffer.
 '         */
-        BufferLockFree( unsigned int bufsize, const T& initial_value = T(), bool circular = false)
+        BufferLockFree( unsigned int bufsize, const T& initial_value = T{}, bool circular = false)
             : bufs( bufsize ), mpool(bufsize + 1), mcircular(circular), droppedSamples(0)
         {
             mpool.data_sample( initial_value );
@@ -146,7 +146,7 @@ namespace RTT
         {
             return droppedSamples.read();
         }
-        
+
         bool Push( param_t item)
         {
             if ( capacity() == (size_type)bufs.size() ) {
@@ -240,7 +240,7 @@ namespace RTT
             }
             return items.size();
         }
-        
+
         value_t* PopWithoutRelease()
 	{
             Item* ipop;
@@ -249,10 +249,10 @@ namespace RTT
 	    return ipop;
 	}
 
-	void Release(value_t *item) 
+	void Release(value_t *item)
 	{
             if (mpool.deallocate( item ) == false )
-                assert(false);  
+                assert(false);
 	}
     };
 }}

@@ -38,6 +38,8 @@
 #ifndef ORO_MYSTD_HPP
 #define ORO_MYSTD_HPP
 
+#include "../rtt-config.h"
+
 #include <boost/type_traits/add_reference.hpp>
 #include <boost/type_traits/add_const.hpp>
 #include <boost/type_traits/is_same.hpp>
@@ -91,7 +93,9 @@ namespace RTT { namespace internal {
 
     template<typename T>
     struct select1st
+#ifndef ORO_DISABLE_SCRIPTING
       : public std::unary_function<T, typename T::first_type>
+#endif
     {
         typename T::first_type operator()( const T& p ) {
             return p.first;
@@ -100,40 +104,14 @@ namespace RTT { namespace internal {
 
     template<typename T>
     struct select2nd
+#ifndef ORO_DISABLE_SCRIPTING
       : public std::unary_function<T, typename T::second_type>
+#endif
     {
         typename T::second_type operator()( const T& p ) {
             return p.second;
         }
     };
-
-#if 0
-    // Alternative implementations, return const ref.
-    template<typename PairT>
-    class select1st
-      : public std::unary_function<PairT, typename PairT::first_type>
-    {
-      typedef typename PairT::first_type ResultT;
-    public:
-      const ResultT& operator()( const PairT& p )
-        {
-          return p.first;
-        };
-    };
-
-    template<typename PairT>
-    class select2nd
-      : public std::unary_function<PairT, typename PairT::second_type>
-    {
-      typedef typename PairT::second_type ResultT;
-    public:
-      const ResultT& operator()( const PairT& p )
-        {
-          return p.second;
-        };
-    };
-#endif
-
 
     // my own handy little extension..
     template<typename MapT>
@@ -166,7 +144,9 @@ namespace std
     // STL specialisations for const references : Add others if necessary.
     template <class _Tp>
     struct equal_to< const _Tp& >
+#ifndef ORO_DISABLE_SCRIPTING
         : public binary_function<const _Tp&, const _Tp& ,bool>
+#endif
     {
         bool operator()(const _Tp& __x, const _Tp& __y) const { return __x == __y; }
     };
@@ -174,7 +154,9 @@ namespace std
     /// One of the @link s20_3_3_comparisons comparison functors@endlink.
     template <class _Tp>
     struct not_equal_to<const _Tp&>
+#ifndef ORO_DISABLE_SCRIPTING
         : public binary_function<const _Tp&, const _Tp&, bool>
+#endif
     {
         bool operator()(const _Tp& __x, const _Tp& __y) const { return __x != __y; }
     };
@@ -182,7 +164,9 @@ namespace std
     /// One of the @link s20_3_3_comparisons comparison functors@endlink.
     template <class _Tp>
     struct greater<const _Tp&>
+#ifndef ORO_DISABLE_SCRIPTING
         : public binary_function<const _Tp&,const _Tp&,bool>
+#endif
     {
         bool operator()(const _Tp& __x, const _Tp& __y) const { return __x > __y; }
     };
@@ -190,7 +174,9 @@ namespace std
     /// One of the @link s20_3_3_comparisons comparison functors@endlink.
     template <class _Tp>
     struct less<const _Tp&>
+#ifndef ORO_DISABLE_SCRIPTING
         : public binary_function<const _Tp&,const _Tp&,bool>
+#endif
     {
         bool operator()(const _Tp& __x, const _Tp& __y) const { return __x < __y; }
     };
@@ -212,7 +198,9 @@ namespace RTT
 
   template<typename T>
   struct identity
+#ifndef ORO_DISABLE_SCRIPTING
     : public std::unary_function<T, T>
+#endif
   {
     const T& operator()( const T& t ) const
       {

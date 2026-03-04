@@ -104,9 +104,7 @@ namespace RTT
 
     bool PropertyBag::addProperty(PropertyBase& p)
     {
-        if (&p == 0)
-            return false;
-        if ( ! p.ready() )
+        if (! p.ready())
             return false;
         mproperties.push_back(&p);
         return true;
@@ -201,7 +199,10 @@ namespace RTT
      *
      * A function object for finding a Property by name.
      */
-    struct FindProp : public std::binary_function<const base::PropertyBase*,const std::string, bool>
+    struct FindProp
+#ifndef ORO_DISABLE_SCRIPTING
+	: public std::binary_function<const base::PropertyBase*,const std::string, bool>
+#endif
     {
         bool operator()(const base::PropertyBase* b1, const std::string& b2) const { return b1->getName() == b2; }
     };
@@ -209,7 +210,7 @@ namespace RTT
 
     PropertyBase* PropertyBag::find(const std::string& name) const
     {
-        const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind2nd(FindProp(), name ) ) );
+        const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind(FindProp(), placeholders::_1, name ) ) );
         if ( i != mproperties.end() )
             return ( *i );
         return 0;
@@ -217,7 +218,7 @@ namespace RTT
 
     base::PropertyBase* PropertyBag::getProperty(const std::string& name) const
     {
-        const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind2nd(FindProp(), name ) ) );
+        const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind(FindProp(), std::placeholders::_1, name ) ) );
         if ( i != mproperties.end() )
             return *i;
         return 0;

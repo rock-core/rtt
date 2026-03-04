@@ -268,15 +268,26 @@ namespace RTT
          * Returns the object that manages which methods this Task
          * requires to be implemented by another task.
          */
+
+        ServiceRequester::shared_ptr serviceRequest() { return tcrequests; }
+
+#ifndef ORO_ONLY_CXX20_COMPATIBLE_REQUIRES_INTERFACE
         ServiceRequester::shared_ptr requires() { return tcrequests; }
+#endif
 
         /**
          * Returns the object that manages which methods this Task
          * requires to be implemented by another service.
          */
-        ServiceRequester::shared_ptr requires(const std::string& service_name) {
-            return tcrequests->requires(service_name);
+        ServiceRequester::shared_ptr serviceRequest(const std::string& service_name) {
+            return tcrequests->serviceRequest(service_name);
         }
+
+#ifndef ORO_ONLY_CXX20_COMPATIBLE_REQUIRES_INTERFACE
+        ServiceRequester::shared_ptr requires(const std::string& service_name) {
+            return serviceRequest(service_name);
+        }
+#endif
 
         /**
          * Connects all requires/provides services of this component to these of a peer.

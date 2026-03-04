@@ -136,7 +136,7 @@ namespace RTT
          * @todo: since setDataSample, initial_value is no longer needed.
          */
         template<typename T>
-        static base::ChannelElementBase* buildDataStorage(ConnPolicy const& policy, const T& initial_value = T())
+        static base::ChannelElementBase* buildDataStorage(ConnPolicy const& policy, const T& initial_value = T{})
         {
             if (policy.type == ConnPolicy::DATA)
             {
@@ -252,7 +252,7 @@ namespace RTT
          * @param initial_value The value to use to initialize the connection's storage buffer.
          */
         template<typename T>
-        static base::ChannelElementBase::shared_ptr buildBufferedChannelOutput(InputPort<T>& port, ConnID* conn_id, ConnPolicy const& policy, T const& initial_value = T() )
+        static base::ChannelElementBase::shared_ptr buildBufferedChannelOutput(InputPort<T>& port, ConnID* conn_id, ConnPolicy const& policy, T const& initial_value = T{} )
         {
             assert(conn_id);
             base::ChannelElementBase::shared_ptr endpoint = new ConnOutputEndpoint<T>(&port, conn_id);

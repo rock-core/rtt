@@ -41,7 +41,7 @@
 
 #include <boost/function.hpp>
 #include <boost/type_traits/function_traits.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/mem_fn.hpp>
 
 namespace RTT
@@ -65,6 +65,7 @@ namespace RTT
         {
             template<class M, class O>
             boost::function<F> operator()(M m, O o) {
+		using namespace boost::placeholders;
                 return boost::bind( boost::mem_fn(m), o, _1 );
             }
         };
@@ -74,6 +75,7 @@ namespace RTT
         {
             template<class M, class O>
             boost::function<F> operator()(M m, O o) {
+		using namespace boost::placeholders;
                 return boost::bind( boost::mem_fn(m), o, _1, _2 );
             }
         };
@@ -83,6 +85,7 @@ namespace RTT
         {
             template<class M, class O>
             boost::function<F> operator()(M m, O o) {
+		using namespace boost::placeholders;
                 return boost::bind( boost::mem_fn(m), o, _1, _2, _3 );
             }
         };
@@ -92,6 +95,7 @@ namespace RTT
         {
             template<class M, class O>
             boost::function<F> operator()(M m, O o) {
+		using namespace boost::placeholders;
                 return boost::bind( boost::mem_fn(m), o, _1, _2, _3, _4 );
             }
         };
@@ -101,6 +105,7 @@ namespace RTT
         {
             template<class M, class O>
             boost::function<F> operator()(M m, O o) {
+		using namespace boost::placeholders;
                 return boost::bind( boost::mem_fn(m), o, _1, _2, _3, _4, _5 );
             }
         };
@@ -110,6 +115,7 @@ namespace RTT
         {
             template<class M, class O>
             boost::function<F> operator()(M m, O o) {
+		using namespace boost::placeholders;
                 return boost::bind( boost::mem_fn(m), o, _1, _2, _3, _4, _5, _6 );
             }
         };
@@ -119,6 +125,7 @@ namespace RTT
         {
             template<class M, class O>
             boost::function<F> operator()(M m, O o) {
+		using namespace boost::placeholders;
                 return boost::bind( boost::mem_fn(m), o, _1, _2, _3, _4, _5, _6, _7 );
             }
         };
@@ -128,6 +135,7 @@ namespace RTT
         {
             template<class M, class O>
             boost::function<F> operator()(M m, O o) {
+		using namespace boost::placeholders;
                 return boost::bind( boost::mem_fn(m), o, _1, _2, _3, _4, _5, _6, _7, _8 );
             }
         };
@@ -137,6 +145,7 @@ namespace RTT
         {
             template<class M, class O>
             boost::function<F> operator()(M m, O o) {
+		using namespace boost::placeholders;
                 return boost::bind( boost::mem_fn(m), o, _1, _2, _3, _4, _5, _6, _7, _8, _9 );
             }
         };

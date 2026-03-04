@@ -138,11 +138,11 @@ namespace RTT
         { return read(sample, true); }
 
         /** Reads a sample from the connection. \a sample is a reference which
-         * will get updated if a new sample is available. 
-	 * 
+         * will get updated if a new sample is available.
+	 *
 	 * The method returns an enum FlowStatus, which describes what type of
 	 * sample (old or new data) or if a sample was returned (no data)
-         * 
+         *
 	 * With the argument @arg copy_old_data one can specify, if sample should
 	 * be updated in the case that the return type is equal to RTT::OldData.
 	 * In case @arg copy_old_data is false and an old sample is available, the
@@ -150,6 +150,8 @@ namespace RTT
          */
         FlowStatus read(typename base::ChannelElement<T>::reference_t sample, bool copy_old_data)
         {
+            using namespace boost::placeholders;
+
             FlowStatus result = NoData;
             // read and iterate if necessary.
             cmanager.select_reader_channel( boost::bind( &InputPort::do_read, this, boost::ref(sample), boost::ref(result), _1, _2 ), copy_old_data );
@@ -176,7 +178,7 @@ namespace RTT
         /**
          * Get a sample of the data on this port, without actually reading the port's data.
          * It's the complement of OutputPort::setDataSample() and serves to retrieve the size
-         * of a variable sized data type T. Returns default T if !connected() or if the 
+         * of a variable sized data type T. Returns default T if !connected() or if the
          * OutputPort did not use setDataSample(). Returns an example T otherwise.
          * In case multiple inputs are connected to this port a sample from the currently read
          * connection will be returned.

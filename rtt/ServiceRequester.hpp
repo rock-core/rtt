@@ -125,9 +125,12 @@ namespace RTT
 
         base::OperationCallerBaseInvoker* getOperationCaller(const std::string& name);
 
+        ServiceRequester::shared_ptr serviceRequest();
+        ServiceRequester::shared_ptr serviceRequest(const std::string& service_name);
+#ifndef ORO_ONLY_CXX20_COMPATIBLE_REQUIRES_INTERFACE
         ServiceRequester::shared_ptr requires();
-
         ServiceRequester::shared_ptr requires(const std::string& service_name);
+#endif
 
         /**
          * Add a new ServiceRequester to this TaskContext.

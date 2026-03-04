@@ -39,8 +39,12 @@
 #ifndef ORO_SEQUENCE_TYPE_INFO_BASE_HPP
 #define ORO_SEQUENCE_TYPE_INFO_BASE_HPP
 
+#include "../rtt-config.h"
+
+#ifndef ORO_DISABLE_SCRIPTING
 #include "SequenceConstructor.hpp"
 #include "TemplateConstructor.hpp"
+#endif
 #include "PropertyComposition.hpp"
 #include "VectorTemplateComposition.hpp"
 #include "PropertyDecomposition.hpp"
@@ -131,9 +135,11 @@ namespace RTT
             }
 
             bool installTypeInfoObject(TypeInfo* ti) {
+#ifndef ORO_DISABLE_SCRIPTING
                 ti->addConstructor( new SequenceBuilder<T>() );
                 ti->addConstructor( newConstructor( sequence_ctor<T>() ) );
                 ti->addConstructor( newConstructor( sequence_ctor2<T>() ) );
+#endif
                 // Don't delete us, we're memory-managed.
                 return false;
             }

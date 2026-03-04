@@ -41,9 +41,11 @@
 #include "internal/mystd.hpp"
 #include "Logger.hpp"
 #include "TaskContext.hpp"
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 #include <utility>
+
+using namespace boost::placeholders;
 
 namespace RTT
 {
@@ -97,7 +99,7 @@ namespace RTT
         this->mrowner = new_owner;
     }
 
-    ServiceRequester::shared_ptr ServiceRequester::requires() {
+    ServiceRequester::shared_ptr ServiceRequester::serviceRequest() {
         try {
             return shared_from_this();
         } catch( boost::bad_weak_ptr& /*bw*/ ) {
@@ -108,9 +110,16 @@ namespace RTT
         }
     }
 
-    ServiceRequester::shared_ptr ServiceRequester::requires(const std::string& service_name) {
-        if (service_name == "this")
-            return requires();
+#ifndef ORO_ONLY_CXX20_COMPATIBLE_REQUIRES_INTERFACE
+    ServiceRequester::shared_ptr ServiceRequester::requires() {
+        return serviceRequest();
+    }
+#endif
+
+    ServiceRequester::shared_ptr ServiceRequester::serviceRequest(const std::string& service_name) {
+        if (service_name == "this") {
+            return serviceRequest();
+        }
         shared_ptr sp = mrequests[service_name];
         if (sp)
             return sp;
@@ -118,6 +127,12 @@ namespace RTT
         mrequests[service_name] = sp;
         return sp;
     }
+
+#ifndef ORO_ONLY_CXX20_COMPATIBLE_REQUIRES_INTERFACE
+    ServiceRequester::shared_ptr ServiceRequester::requires(const std::string& service_name) {
+        return serviceRequest(service_name);
+    }
+#endif
 
     bool ServiceRequester::addServiceRequester(ServiceRequester::shared_ptr obj) {
         if ( mrequests.find( obj->getRequestName() ) != mrequests.end() ) {

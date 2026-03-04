@@ -38,6 +38,7 @@
 #ifndef PI_PROPERTY_BAG
 #define PI_PROPERTY_BAG
 
+#include "rtt-config.h"
 #include "base/PropertyBase.hpp"
 
 #include <vector>
@@ -241,7 +242,7 @@ namespace RTT
         template<class T>
         Property<T>* getPropertyType(const std::string& name) const
         {
-            const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind2nd(FindPropType<T>(), name ) ) );
+            const_iterator i( std::find_if(mproperties.begin(), mproperties.end(), std::bind(FindPropType<T>(), std::placeholders::_1, name ) ) );
             if ( i != mproperties.end() )
                 return dynamic_cast<Property<T>* >(*i);
             return 0;
@@ -362,7 +363,10 @@ namespace RTT
          * A function object for finding a Property by name and type.
          */
         template<class T>
-        struct FindPropType : public std::binary_function<const base::PropertyBase*,const std::string, bool>
+        struct FindPropType
+#ifndef ORO_DISABLE_SCRIPTING
+	    : public std::binary_function<const base::PropertyBase*,const std::string, bool>
+#endif
         {
             bool operator()(const base::PropertyBase* b1, const std::string& b2) const { return b1->getName() == b2 && dynamic_cast<const Property<T>* >(b1) != 0; }
         };
