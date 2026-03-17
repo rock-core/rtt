@@ -70,12 +70,17 @@ namespace RTT {
             : public POA_RTT::corba::CRemoteChannelElement
             , public virtual PortableServer::RefCountServantBase
         {
-        protected:
+        private:
+            mutable RTT::os::Mutex remote_side_lock;
             CRemoteChannelElement_var remote_side;
+
+        protected:
             RTT::corba::CorbaTypeTransporter const& transport;
             PortableServer::POA_var mpoa;
             CDataFlowInterface_i* mdataflow;
 
+            CRemoteChannelElement_var resetRemoteSide();
+            CRemoteChannelElement_var getRemoteSide() const;
         public:
             // standard constructor
             CRemoteChannelElement_i(corba::CorbaTypeTransporter const& transport,
@@ -134,6 +139,8 @@ namespace RTT {
             ChannelList channel_list;
             // Lock that should be taken before access to channel_list
             RTT::os::Mutex channel_list_mtx;
+
+            base::ChannelElementBase::shared_ptr findCXXChannelFromCORBA(CChannelElement_ptr corba);
         public:
             // standard constructor
             CDataFlowInterface_i(DataFlowInterface* interface, PortableServer::POA_ptr poa);
@@ -194,6 +201,7 @@ namespace RTT {
             static std::string dispatcherNameFromPolicy(
                     RTT::DataFlowInterface* interface,
                     RTT::ConnPolicy const& policy);
+
             CChannelElement_ptr buildChannelOutput(const char* reader_port, RTT::corba::CConnPolicy& policy) ACE_THROW_SPEC ((
             	      CORBA::SystemException
             	      ,::RTT::corba::CNoCorbaTransport
@@ -204,6 +212,52 @@ namespace RTT {
           	      ,::RTT::corba::CNoCorbaTransport
                   ,::RTT::corba::CNoSuchPortException
           	    ));
+
+            /** Build a channel for the input side of a CORBA channel,
+             *  unconnected to any output port
+             */
+            CChannelElement_ptr buildChannelInputHalf(const char* writer_port, RTT::corba::CConnPolicy& policy)
+                ACE_THROW_SPEC ((
+          	      CORBA::SystemException
+          	      ,::RTT::corba::CNoCorbaTransport
+                  ,::RTT::corba::CNoSuchPortException
+          	    ));
+
+            /** Connect a channel create by buildChannelInputHalf to an output port */
+            CORBA::Boolean connectChannelInputHalf(
+                const char* output_port_name, CChannelElement_ptr channel,
+                CConnPolicy const& policy
+            ) ACE_THROW_SPEC ((
+                    CORBA::SystemException
+                    ,::RTT::corba::CNoSuchPortException
+                ));
+
+            /** Build a channel for the output side of a CORBA channel,
+             *  unconnected to any input port
+             */
+            CChannelElement_ptr buildChannelOutputHalf(
+                const char* port_name, const CConnPolicy & corba_policy
+            ) ACE_THROW_SPEC ((
+                    CORBA::SystemException
+                    ,::RTT::corba::CNoCorbaTransport
+                    ,::RTT::corba::CNoSuchPortException
+                ));
+
+            /** Connect a channel created by buildChannelOutputHalf to an input port */
+            CORBA::Boolean connectChannelOutputHalf(
+                const char* input_port_name, CChannelElement_ptr channel,
+                CConnPolicy const& policy
+            ) ACE_THROW_SPEC ((
+                    CORBA::SystemException
+                    ,::RTT::corba::CNoSuchPortException
+                ));
+
+            ::CORBA::Boolean createLocalConnection(
+                    const char* writer_port, CDataFlowInterface_ptr reader_interface,
+                    const char* reader_port, CConnPolicy & policy) ACE_THROW_SPEC ((
+                              CORBA::SystemException
+                              ,::RTT::corba::CNoSuchPortException
+                            ));
 
             ::CORBA::Boolean createConnection( const char* writer_port,
                                                CDataFlowInterface_ptr reader_interface,

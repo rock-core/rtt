@@ -16,6 +16,7 @@ OPTION(OS_HAVE_STREAMS "Use C++ streams library." ON)
 OPTION(OS_HAVE_MAIN "Provide main() function in rtt library, which sets up the OS. The user implements ORO_main()." ON)
 OPTION(ORO_OS_USE_BOOST_THREAD "Use the Boost.Thread library. Currently only the mutex implementation is used." OFF)
 set(ROCK_USE_SANITIZERS "" CACHE STRING "Which sanitizers to enable during the build (comma separated, compiler specific)")
+option(ORO_NO_DISCONNECT_DATAFLOW_ON_DESTRUCTION "Disable disconnecting dataflow on task context or port destruction" OFF)
 
 if (ROCK_USE_SANITIZERS)
   add_compile_options("-fsanitize=${ROCK_USE_SANITIZERS}")
